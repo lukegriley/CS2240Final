@@ -4,6 +4,8 @@
 #include <QKeyEvent>
 #include <iostream>
 
+#include "plant/loader.h"
+
 #define SPEED 1.5
 #define ROTATE_SPEED 0.0025
 
@@ -63,6 +65,10 @@ void GLWidget::initializeGL()
     m_shader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/shader.frag");
     m_sim.init();
 
+    // Initialize plant and renderer
+    m_plant = load_plant("./data/plants/plant000.txt");
+    m_plantRenderer.init(m_plant);
+
     // Initialize camera with a reasonable transform
     Eigen::Vector3f eye    = {0, 2, -5};
     Eigen::Vector3f target = {0, 1,  0};
@@ -82,6 +88,7 @@ void GLWidget::paintGL()
     m_shader->setUniform("proj", m_camera.getProjection());
     m_shader->setUniform("view", m_camera.getView());
     m_sim.draw(m_shader);
+    m_plantRenderer.render(m_shader);
     m_shader->unbind();
 }
 

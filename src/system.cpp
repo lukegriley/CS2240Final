@@ -34,15 +34,15 @@ void System::load(std::vector<Vector3d>& verts, std::vector<Vector4i>& tets, Mat
         t->beta = beta.inverse();
 
         //shape function
-        Matrix<double, 3, 12> N;
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                N(j, i * 3 + j) = 1.0 - t->nodes[i]->pos[j];
-                N(j, (i + 1) * 3 + j) = t->nodes[i]->pos[j];
-            }
-            t->x.col(i) = Vector3d(t->nodes[i]->pos[0],t->nodes[i]->pos[1],t->nodes[i]->pos[2]);
-        }
-        t->N = N;
+        // Matrix<double, 3, 12> N;
+        // for (int i = 0; i < 4; ++i) {
+        //     for (int j = 0; j < 3; ++j) {
+        //         N(j, i * 3 + j) = 1.0 - t->nodes[i]->pos[j];
+        //         N(j, (i + 1) * 3 + j) = t->nodes[i]->pos[j];
+        //     }
+        //     t->x.col(i) = Vector3d(t->nodes[i]->pos[0],t->nodes[i]->pos[1],t->nodes[i]->pos[2]);
+        // }
+        // t->N = N;
 
 
         // t->nodes[0]->pos += Vector3d(0,0.5,0);

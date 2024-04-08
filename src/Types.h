@@ -19,7 +19,7 @@ struct Tet {
     Node *nodes[4];
     double volume;
     Matrix3d beta;
-    Matrix<double,3,4> x;
+    // Matrix<double,3,4> x;
     double area012;
     double area013;
     double area123;
@@ -29,7 +29,7 @@ struct Tet {
     Vector3d norm123;
     Vector3d norm023;
     Matrix<double, 3,4> internalForceChange;
-    Matrix<double, 3, 12> N;
+    // Matrix<double, 3, 12> N;
 };
 
 struct Node {

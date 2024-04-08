@@ -37,6 +37,11 @@ add_executable(${PROJECT_NAME}
     src/graphics/meshloader.cpp
     src/graphics/shader.cpp
     src/graphics/shape.cpp
+    src/plant/loader.cpp
+    src/plant/plant.cpp
+    src/plant/write.cpp
+    src/render/line.cpp
+    src/render/cylinder.cpp
 
     src/mainwindow.h
     src/simulation.h
