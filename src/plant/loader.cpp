@@ -97,7 +97,11 @@ Plant load_plant(const std::string &plant_path) {
 			plant.vertices[edge.vertices[j]].edges.insert(i);
 		}
 	}
+    plant.initDiffusion();
+    plant.updateDiffusion(1.f);
 
 	return plant;
 }
+
+
 

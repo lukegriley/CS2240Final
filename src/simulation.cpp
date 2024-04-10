@@ -84,9 +84,9 @@ void Simulation::update(double seconds)
 
 void Simulation::draw(Shader *shader)
 {
-    m_shape.draw(shader);
+    // m_shape.draw(shader);
     m_ground.draw(shader);
-    m_sphere.draw(shader);
+    // m_sphere.draw(shader);
 }
 
 void Simulation::toggleWire()

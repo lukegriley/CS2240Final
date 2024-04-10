@@ -19,6 +19,7 @@ private:
     int edge_count;
     std::vector<Eigen::Affine3d> transformations;
     Shape m_cylinder;
+    float uniform_scale = 10.f;
 };
 
 

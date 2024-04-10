@@ -182,7 +182,7 @@ void GLWidget::tick()
     float deltaSeconds = m_deltaTimeProvider.restart() / 1000.f;
     double curr =0;
     while (curr < deltaSeconds) {
-        double step = min(.0003,deltaSeconds - curr);
+        double step = min(.003,deltaSeconds - curr);
         m_sim.update(step);
         curr += step;
     }
