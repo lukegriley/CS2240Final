@@ -10,7 +10,7 @@ using namespace std;
  * As the paper mentions in section 4, this is a naive method to compute theta_t
  * since the matrix multiplication is very expensive.
  *
- * so TLDR we need to implement section 4.1 and 4.2 to make this more efficient
+ * so TODO:we need to implement section 4.1 and 4.2 to make this more efficient
  */
 
 void Plant::initDiffusion() {
