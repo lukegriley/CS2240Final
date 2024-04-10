@@ -3,6 +3,16 @@
 
 using namespace std;
 
+
+/*
+ * NOTE from Luke 4/10:
+ * This has been implemented according to the analytical solution (5) in section 3.2
+ * As the paper mentions in section 4, this is a naive method to compute theta_t
+ * since the matrix multiplication is very expensive.
+ *
+ * so TLDR we need to implement section 4.1 and 4.2 to make this more efficient
+ */
+
 void Plant::initDiffusion() {
     cout << "Starting diffusion init" <<endl;
     this->theta_0 = Eigen::MatrixXf(this->vertices.size(),1);
@@ -20,8 +30,9 @@ void Plant::initDiffusion() {
         this->theta_0.coeffRef(v0->index,0) = v0->volume;
     }
 
-    cout << "Initializing D_V and D_L" <<endl;
+
     //initialize D_V and D_l, diagonal matrices filled
+    cout << "Initializing D_V and D_L" <<endl;
     this->D_V = Eigen::MatrixXf(this->vertices.size(),this->vertices.size());
     this->D_V.setZero();
     this->D_l = Eigen::MatrixXf(this->vertices.size(),this->vertices.size());
@@ -31,8 +42,9 @@ void Plant::initDiffusion() {
         this->D_l.coeffRef(v.index,v.index) = v.loss_rate;
     }
 
-    cout << "Computing pressure and resistance at each node" <<endl;
+
     //compute pressure and resistance at each node
+    cout << "Computing pressure and resistance at each node" <<endl;
     for(Edge e : this->edges) {
         Vertex *v0 = &this->vertices[e.vertices[0]];
         Vertex *v1 = &this->vertices[e.vertices[1]];
@@ -45,10 +57,11 @@ void Plant::initDiffusion() {
     }
 
 
-    cout << "Initializing R" <<endl;
+    //initialize the symmetric matrix R
     Eigen::MatrixXf R(this->vertices.size(),this->vertices.size());
     R.setZero();
-    //initialize the symmetric matrix R
+    cout << "Initializing R" <<endl;
+
     for(Vertex &v : this->vertices) {
         float sum_resistance = 0.0;
         //go through each neighbor u
@@ -67,6 +80,8 @@ void Plant::initDiffusion() {
     S = R * this->D_V.inverse() - this->D_l;
     cout << "Init finished" <<endl;
 }
+
+
 
 void Plant::updateDiffusion(float time) {
     cout << "Computing theta at t="<<time <<endl;
