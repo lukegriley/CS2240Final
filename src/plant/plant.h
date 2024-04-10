@@ -35,6 +35,9 @@ struct Plant {
     Eigen::MatrixXf D_V;
     Eigen::MatrixXf D_l;
     Eigen::MatrixXf S;
+    Eigen::MatrixXf phi;
+    Eigen::DiagonalMatrix<float, Eigen::Dynamic> lambda;
+
     float delta = 3e-4; //uniform loss rate of plant
     void initDiffusion();
     void updateDiffusion(float time);//time is total running time, not delta

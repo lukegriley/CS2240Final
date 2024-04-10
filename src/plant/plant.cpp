@@ -78,7 +78,19 @@ void Plant::initDiffusion() {
 
     cout << "Computing S" <<endl;//this step will take a minute or two
     S = R * this->D_V.inverse() - this->D_l;
-    cout << "Init finished" <<endl;
+
+    //a start on 4.1
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(S);
+    if (eigensolver.info() != Eigen::Success) {
+        cerr << "Spectral decomp of S matrix failed" <<endl;
+    } else {
+        Eigen::VectorXf eigenvalues = eigensolver.eigenvalues();
+
+        this->phi = eigensolver.eigenvectors();
+        this->lambda.diagonal() = eigenvalues;
+    }
+
+
 }
 
 
