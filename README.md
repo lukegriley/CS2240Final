@@ -2,6 +2,9 @@
 
 ## Collaborators: Edward Yan, Zongjie Liu, Daniel Cho, Luke Riley
 
+## How to run
+Program can be built and run inside of QtCreator. Make sure to clone the Eigen library repo into this directory as well.
+
 ## Sources
 
 - CS2240 Assignment 3: Finite Element Methods
@@ -13,4 +16,5 @@
 ## Extensions
 
 ## Example Video
+
 
