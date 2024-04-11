@@ -2,7 +2,7 @@
 #include <iostream>
 
 using namespace std;
-
+using namespace Eigen;
 
 /*
  * NOTE from Luke 4/10:
@@ -13,7 +13,7 @@ using namespace std;
  * so TODO:we need to implement section 4.1 and 4.2 to make this more efficient
  */
 
-void Plant::initDiffusion() {
+void Plant::initDiffusion(bool precompute) {
     cout << "Starting diffusion init" <<endl;
     this->theta_0 = Eigen::MatrixXf(this->vertices.size(),1);
 
@@ -27,6 +27,7 @@ void Plant::initDiffusion() {
 
         //Initialize theta (amount of water at a node) as its volume
         v0->volume = M_PI * v0->radius * v0->radius * height;
+        v0->water_amt = v0->volume;
         this->theta_0.coeffRef(v0->index,0) = v0->volume;
     }
 
@@ -78,6 +79,10 @@ void Plant::initDiffusion() {
 
     cout << "Computing S" <<endl;//this step will take a minute or two
     S = R * this->D_V.inverse() - this->D_l;
+
+    // For testing, skip the slow precomputations.
+    if (!precompute)
+        return;
 
     //a start on 4.1
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(S);

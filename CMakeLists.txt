@@ -42,6 +42,8 @@ add_executable(${PROJECT_NAME}
     src/plant/write.cpp
     src/render/line.cpp
     src/render/cylinder.cpp
+    src/render/waterball.cpp
+    src/render/water.cpp
 
     src/mainwindow.h
     src/simulation.h
@@ -89,6 +91,7 @@ qt6_add_resources(${PROJECT_NAME} "Resources"
     PREFIX
         "/"
     FILES
+        resources/shaders/plant.frag
         resources/shaders/shader.frag
         resources/shaders/shader.vert
         example-meshes/single-tet.mesh

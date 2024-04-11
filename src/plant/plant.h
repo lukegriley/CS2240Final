@@ -39,7 +39,7 @@ struct Plant {
     Eigen::DiagonalMatrix<float, Eigen::Dynamic> lambda;
 
     float delta = 3e-4; //uniform loss rate of plant
-    void initDiffusion();
+    void initDiffusion(bool precompute = true);
     void updateDiffusion(float time);//time is total running time, not delta
 
     Eigen::MatrixXf theta_0;//initial water content at each node

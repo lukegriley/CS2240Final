@@ -63,6 +63,7 @@ void GLWidget::initializeGL()
 
     // Initialize the shader and simulation
     m_shader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/shader.frag");
+    m_plantShader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/plant.frag");
     m_sim.init();
 
     // Initialize plant and renderer
@@ -88,8 +89,13 @@ void GLWidget::paintGL()
     m_shader->setUniform("proj", m_camera.getProjection());
     m_shader->setUniform("view", m_camera.getView());
     m_sim.draw(m_shader);
-    m_plantRenderer.render(m_shader);
     m_shader->unbind();
+
+    m_plantShader->bind();
+    m_plantShader->setUniform("proj", m_camera.getProjection());
+    m_plantShader->setUniform("view", m_camera.getView());
+    m_plantRenderer.render(m_plantShader);
+    m_plantShader->unbind();
 }
 
 void GLWidget::resizeGL(int w, int h)
