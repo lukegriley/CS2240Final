@@ -66,7 +66,7 @@ void GLWidget::initializeGL()
     m_sim.init();
 
     // Initialize plant and renderer
-    m_plant = load_plant("./data/plants/plant000.txt");
+    m_plant = Loader::load_plant("./data/plants/plant000.txt");
     m_plantRenderer.init(m_plant);
 
     // Initialize camera with a reasonable transform

@@ -36,15 +36,19 @@ struct Plant {
     Eigen::MatrixXf D_l;
     Eigen::MatrixXf S;
     Eigen::MatrixXf phi;
-    Eigen::DiagonalMatrix<float, Eigen::Dynamic> lambda;
+    Eigen::MatrixXf lambda;
 
     float delta = 3e-4; //uniform loss rate of plant
     void initDiffusion();
     void updateDiffusion(float time);//time is total running time, not delta
 
     Eigen::MatrixXf theta_0;//initial water content at each node
+    Eigen::MatrixXf zeta_0;//implicit computation of Phi inverse at initialization; see section 4.2
+    bool load_S = true;
 
 };
+
+
 
 
 
