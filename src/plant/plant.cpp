@@ -32,16 +32,27 @@ void Plant::initDiffusion(bool precompute) {
     }
 
 
+    // //initialize D_V and D_l, diagonal matrices filled
+    // cout << "Initializing D_V and D_L" <<endl;
+    // this->D_V = Eigen::MatrixXf(this->vertices.size(),this->vertices.size());
+    // this->D_V.setZero();
+    // this->D_l = Eigen::MatrixXf(this->vertices.size(),this->vertices.size());
+    // this->D_l.setZero();
+    // for(Vertex &v : this->vertices) {
+    //     this->D_V.coeffRef(v.index,v.index) = v.volume;
+    //     this->D_l.coeffRef(v.index,v.index) = v.loss_rate;
+    // }
+
     //initialize D_V and D_l, diagonal matrices filled
     cout << "Initializing D_V and D_L" <<endl;
-    this->D_V = Eigen::MatrixXf(this->vertices.size(),this->vertices.size());
-    this->D_V.setZero();
-    this->D_l = Eigen::MatrixXf(this->vertices.size(),this->vertices.size());
-    this->D_l.setZero();
+    SparseMatrix<double> sparse_DV_inverse(vertices.size(), vertices.size());
+    SparseMatrix<double> sparse_DL(vertices.size(), vertices.size());
+    sparse_DV_inverse.setZero(); sparse_DL.setZero();
     for(Vertex &v : this->vertices) {
-        this->D_V.coeffRef(v.index,v.index) = v.volume;
-        this->D_l.coeffRef(v.index,v.index) = v.loss_rate;
+        sparse_DV_inverse.coeffRef(v.index,v.index) = 1. / v.volume;
+        sparse_DL.coeffRef(v.index,v.index) = v.loss_rate;
     }
+    sparse_DV_inverse.makeCompressed(); sparse_DL.makeCompressed();
 
 
     //compute pressure and resistance at each node
@@ -59,7 +70,8 @@ void Plant::initDiffusion(bool precompute) {
 
 
     //initialize the symmetric matrix R
-    Eigen::MatrixXf R(this->vertices.size(),this->vertices.size());
+    // Eigen::MatrixXf R(this->vertices.size(),this->vertices.size());
+    SparseMatrix<double> R(this->vertices.size(),this->vertices.size());
     R.setZero();
     cout << "Initializing R" <<endl;
 
@@ -77,23 +89,24 @@ void Plant::initDiffusion(bool precompute) {
         R.coeffRef(v.index,v.index) = sum_resistance;
     }
 
-    cout << "Computing S" <<endl;//this step will take a minute or two
-    S = R * this->D_V.inverse() - this->D_l;
+    // cout << "Computing S" <<endl;//this step will take a minute or two
+    // S = R * this->D_V.inverse() - this->D_l;
+    m_S_sparse = R * sparse_DV_inverse - sparse_DL;
 
-    // For testing, skip the slow precomputations.
-    if (!precompute)
-        return;
+    // // For testing, skip the slow precomputations.
+    // if (!precompute)
+    //     return;
 
-    //a start on 4.1
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(S);
-    if (eigensolver.info() != Eigen::Success) {
-        cerr << "Spectral decomp of S matrix failed" <<endl;
-    } else {
-        Eigen::VectorXf eigenvalues = eigensolver.eigenvalues();
+    // //a start on 4.1
+    // Eigen::SelfAdjointEigenSolver<Eigen::MatrixXf> eigensolver(S);
+    // if (eigensolver.info() != Eigen::Success) {
+    //     cerr << "Spectral decomp of S matrix failed" <<endl;
+    // } else {
+    //     Eigen::VectorXf eigenvalues = eigensolver.eigenvalues();
 
-        this->phi = eigensolver.eigenvectors();
-        this->lambda.diagonal() = eigenvalues;
-    }
+    //     this->phi = eigensolver.eigenvectors();
+    //     this->lambda.diagonal() = eigenvalues;
+    // }
 
 
     // 4.2 precomputation for fast solver
@@ -103,8 +116,8 @@ void Plant::initDiffusion(bool precompute) {
     double m_alpha = 60. / 147.;
     VectorXd m_beta(6); m_beta << -10, 72, -225, 400, -450, 360; m_beta *= 1. / 147.;
 
-    // precompute matrix decomposition
-    SparseMatrix<double> m_S_sparse = S.sparseView(); m_S_sparse.makeCompressed();
+    // cache matrix for fast computation
+    // SparseMatrix<double> m_S_sparse = S.sparseView(); m_S_sparse.makeCompressed();
 
 
 }
