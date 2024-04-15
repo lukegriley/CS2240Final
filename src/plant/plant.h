@@ -41,6 +41,12 @@ struct Plant {
     float delta = 3e-4; //uniform loss rate of plant
     void initDiffusion(bool precompute = true);
     void updateDiffusion(float time);//time is total running time, not delta
+    void updateDiffusionDelta(const float dt); // delta time diffusion update
+
+    Eigen::MatrixXd m_omega;
+    double m_alpha;
+    Eigen::VectorXd m_beta;
+    Eigen::SparseMatrix<double> m_S_sparse;
 
     Eigen::MatrixXf theta_0;//initial water content at each node
 

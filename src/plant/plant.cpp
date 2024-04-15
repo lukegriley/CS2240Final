@@ -96,16 +96,49 @@ void Plant::initDiffusion(bool precompute) {
     }
 
 
+    // 4.2 precomputation for fast solver
+
+    // variables
+    MatrixXd m_omega(vertices.size(), 6); m_omega.setOnes(); m_omega *= 50; // initial water values!!!!!!!
+    double m_alpha = 60. / 147.;
+    VectorXd m_beta(6); m_beta << -10, 72, -225, 400, -450, 360; m_beta *= 1. / 147.;
+
+    // precompute matrix decomposition
+    SparseMatrix<double> m_S_sparse = S.sparseView(); m_S_sparse.makeCompressed();
+
+
 }
 
 
 
 void Plant::updateDiffusion(float time) {
-    cout << "Computing theta at t="<<time <<endl;
-    Eigen::MatrixXf theta_t = (this->S*time).array().exp().matrix() * this->theta_0;
-    for(int i=0;i<this->vertices.size();i++) {
-        this->vertices[i].water_amt = theta_t.coeffRef(i,0);
-    }
-    cout << "Update finished" <<endl;
+    // cout << "Computing theta at t="<<time <<endl;
+    // Eigen::MatrixXf theta_t = (this->S*time).array().exp().matrix() * this->theta_0;
+    // for(int i=0;i<this->vertices.size();i++) {
+    //     this->vertices[i].water_amt = theta_t.coeffRef(i,0);
+    // }
+    // cout << "Update finished" <<endl;
+
+    cout << "computation moved to updateDiffusionDelta!!" << std::endl;
+}
+
+void Plant::updateDiffusionDelta(const float dt)
+{
+    // sparse solver
+    SimplicialLLT<SparseMatrix<double>> solver(MatrixXd::Identity(vertices.size(), vertices.size()) - m_alpha * dt * m_S_sparse);
+
+    // b vector calculation
+    VectorXd b = m_omega * m_beta;
+
+    // fast computation
+    VectorXd solution = solver.solve(b);
+
+    // update omega
+    m_omega.col(0) = m_omega.col(1);
+    m_omega.col(1) = m_omega.col(2);
+    m_omega.col(2) = m_omega.col(3);
+    m_omega.col(3) = m_omega.col(4);
+    m_omega.col(4) = m_omega.col(5);
+    m_omega.col(5) = solution;
 }
 
