@@ -8,7 +8,7 @@
 #include "graphics/camera.h"
 #include "graphics/shader.h"
 #include "plant/plant.h"
-#include "render/water.h"
+#include "render/cylinder.h"
 #include <QOpenGLWidget>
 #include <QElapsedTimer>
 #include <QTimer>
@@ -44,7 +44,7 @@ private:
     QTimer        m_intervalTimer;     // For triggering timed events
 
     Plant m_plant;
-    WaterPlantRenderer m_plantRenderer;
+    CylinderPlantRenderer m_plantRenderer;
     Simulation m_sim;
     Camera     m_camera;
     Shader    *m_shader;
