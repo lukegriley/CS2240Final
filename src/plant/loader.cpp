@@ -84,14 +84,14 @@ void Loader::load_S_decomp(const std::string &plant_path, Plant &plant){
         expect('\n');
     }
 
-    int lambda_size = Loader::read_header<int>(plant_istream, "lambda");
-    plant.lambda = Eigen::MatrixXf::Zero(lambda_size,lambda_size);
+    // int lambda_size = Loader::read_header<int>(plant_istream, "lambda");
+    // plant.lambda = Eigen::MatrixXf::Zero(lambda_size,lambda_size);
 
-    for (int i = 0; i < lambda_size; ++i) {
-        float coeff;
-        plant_istream >> coeff >> expect('\n');
-        plant.lambda(i,i) = coeff;
-    }
+    // for (int i = 0; i < lambda_size; ++i) {
+    //     float coeff;
+    //     plant_istream >> coeff >> expect('\n');
+    //     plant.lambda(i,i) = coeff;
+    // }
 
 }
 

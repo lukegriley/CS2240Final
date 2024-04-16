@@ -9,15 +9,6 @@ Vertex::Vertex()
       tail_position(0, 0, 0) {
 }
 
-/*
- * NOTE from Luke 4/10:
- * This has been implemented according to the analytical solution (5) in section 3.2
- * As the paper mentions in section 4, this is a naive method to compute theta_t
- * since the matrix multiplication is very expensive.
- *
- * so TODO:we need to implement section 4.1 and 4.2 to make this more efficient
- */
-
 void Plant::initDiffusion(bool precompute) {
     cout << "Starting diffusion init" <<endl;
     this->theta_0 = Eigen::MatrixXf(this->vertices.size(),1);
@@ -128,8 +119,6 @@ void Plant::initDiffusion(bool precompute) {
 
 
 }
-
-
 
 void Plant::updateDiffusion(float time) {
     // cout << "Computing theta at t="<<time <<endl;
