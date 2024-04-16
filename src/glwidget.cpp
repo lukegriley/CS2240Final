@@ -193,6 +193,8 @@ void GLWidget::tick()
         curr += step;
     }
 
+    m_plant.updateDiffusionDelta(deltaSeconds);
+    this->m_plantRenderer.update_colors(m_plant);
 
     // Move camera
     auto look = m_camera.getLook();

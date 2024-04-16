@@ -23,17 +23,17 @@ Plant Loader::load_plant(const std::string &plant_path) {
 	for (int i = 0; i < plant.vertex_count; ++i) {
 		Vertex vertex;
         plant_istream >> vertex.index >> expect(',')
-                >> vertex.position[0] >> expect(',')
-                >> vertex.position[1] >> expect(',')
-                >> vertex.position[2] >> expect(',')
+                >> vertex.tail_position[0] >> expect(',')
+                >> vertex.tail_position[1] >> expect(',')
+                >> vertex.tail_position[2] >> expect(',')
                 >> vertex.radius >> expect(',')
                 >> vertex.on_leaf;
         // Convert to z-up
-        vertex.position = Matrix3d {
+        vertex.tail_position = Matrix3d {
             { 1, 0, 0 },
             { 0, 0, 1 },
             { 0, -1, 0 },
-        } * vertex.position;
+        } * vertex.tail_position;
         // Read optional arguments
         if (plant_istream.get() == ',') {
             plant_istream >> vertex.fixed;
@@ -59,9 +59,10 @@ Plant Loader::load_plant(const std::string &plant_path) {
 		for (int j = 0; j < 2; ++j) {
 			plant.vertices[edge.vertices[j]].edges.insert(i);
 		}
+        // Record the first vertex's tail as the next vertex's head
+        plant.vertices[edge.vertices[1]].head_position = plant.vertices[edge.vertices[0]].tail_position;
 	}
-    plant.initDiffusion();
-    plant.updateDiffusion(1.f);
+    plant.initDiffusion(false);
 
 	return plant;
 }

@@ -42,8 +42,6 @@ add_executable(${PROJECT_NAME}
     src/plant/write.cpp
     src/render/line.cpp
     src/render/cylinder.cpp
-    src/render/waterball.cpp
-    src/render/water.cpp
 
     src/mainwindow.h
     src/simulation.h
