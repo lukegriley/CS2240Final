@@ -4,46 +4,9 @@
 
 using namespace Eigen;
 
-// Read a line formatted as <header name> <header value> and return the value.
-template <class T>
-T read_header(std::istream &stream, const std::string &name) {
-	if (!stream.good()) {
-		throw std::runtime_error("bad stream");
-	}
-	std::string header_name;
-	T value;
-	stream >> header_name >> value;
-	// Check that the correct header and value were read
-	if (!stream.good()) {
-		throw std::runtime_error("not a header line");
-	}
-	if (header_name != name) {
-		throw std::runtime_error(
-				"invalid header name " + header_name + ". Expected " + name);
-	}
-	// Return the header value
-	return value;
-}
 
-// Expect a certain character in a stream
-struct expect {
-    explicit expect(int c) : c(c) {}
 
-    friend std::istream &operator>>(std::istream &stream, expect e) {
-        using namespace std::literals;
-        int x = stream.get();
-        if (x != e.c) {
-            throw std::runtime_error((std::ostringstream()
-                                      << "expected char '" << e.c << "', received '" << x << "'"
-                                      ).str());
-        }
-        return stream;
-    }
-private:
-    int c;
-};
-
-Plant load_plant(const std::string &plant_path) {
+Plant Loader::load_plant(const std::string &plant_path) {
 	std::ifstream plant_istream(plant_path);
     if (!plant_istream.good()) {
         throw std::runtime_error("Unable to open " + plant_path);
@@ -52,7 +15,7 @@ Plant load_plant(const std::string &plant_path) {
 	Plant plant;
 
 	// Read the number of vertices.
-	plant.vertex_count = read_header<int>(plant_istream, "verts");
+    plant.vertex_count = Loader::read_header<int>(plant_istream, "verts");
 	// Allocate space to hold vertex data.
 	plant.vertices = std::vector<Vertex>(plant.vertex_count);
 
@@ -103,5 +66,32 @@ Plant load_plant(const std::string &plant_path) {
 	return plant;
 }
 
+void Loader::load_S_decomp(const std::string &plant_path, Plant &plant){
+    std::ifstream plant_istream(plant_path);
+    if (!plant_istream.good()) {
+        throw std::runtime_error("Unable to open " + plant_path);
+    }
+    int phi_size = Loader::read_header<int>(plant_istream, "phi");
+    plant.phi = Eigen::MatrixXf::Zero(phi_size,phi_size);
+
+    for (int i = 0; i < phi_size; ++i) {
+        for(int j=0;j<phi_size;j++) {
+            float coeff;
+            plant_istream >> coeff >> expect(' ');
+            plant.phi(i,j) = coeff;
+        }
+        expect('\n');
+    }
+
+    int lambda_size = Loader::read_header<int>(plant_istream, "lambda");
+    plant.lambda = Eigen::MatrixXf::Zero(lambda_size,lambda_size);
+
+    for (int i = 0; i < lambda_size; ++i) {
+        float coeff;
+        plant_istream >> coeff >> expect('\n');
+        plant.lambda(i,i) = coeff;
+    }
+
+}
 
 
