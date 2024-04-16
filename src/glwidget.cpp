@@ -4,8 +4,6 @@
 #include <QKeyEvent>
 #include <iostream>
 
-#include "plant/loader.h"
-
 #define SPEED 1.5
 #define ROTATE_SPEED 0.0025
 
@@ -63,12 +61,7 @@ void GLWidget::initializeGL()
 
     // Initialize the shader and simulation
     m_shader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/shader.frag");
-    m_plantShader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/plant.frag");
     m_sim.init();
-
-    // Initialize plant and renderer
-    m_plant = load_plant("./data/plants/plant000.txt");
-    m_plantRenderer.init(m_plant);
 
     // Initialize camera with a reasonable transform
     Eigen::Vector3f eye    = {0, 2, -5};
@@ -76,10 +69,9 @@ void GLWidget::initializeGL()
     m_camera.lookAt(eye, target);
     m_camera.setOrbitPoint(target);
     m_camera.setPerspective(120, width() / static_cast<float>(height()), 0.1, 50);
-    m_sim.loadCamera(&m_camera);
 
     m_deltaTimeProvider.start();
-    m_intervalTimer.start(1000 / 120);
+    m_intervalTimer.start(1000 / 60);
 }
 
 void GLWidget::paintGL()
@@ -90,12 +82,6 @@ void GLWidget::paintGL()
     m_shader->setUniform("view", m_camera.getView());
     m_sim.draw(m_shader);
     m_shader->unbind();
-
-    m_plantShader->bind();
-    m_plantShader->setUniform("proj", m_camera.getProjection());
-    m_plantShader->setUniform("view", m_camera.getView());
-    m_plantRenderer.render(m_plantShader);
-    m_plantShader->unbind();
 }
 
 void GLWidget::resizeGL(int w, int h)
@@ -157,11 +143,6 @@ void GLWidget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_R: m_vertical += SPEED; break;
     case Qt::Key_C: m_camera.toggleIsOrbiting(); break;
     case Qt::Key_T: m_sim.toggleWire(); break;
-    case Qt::Key_Z: m_sim.push(); break;
-    case Qt::Key_X: m_sim.pull(); break;
-    case Qt::Key_O: m_sim.toggleRunning(); break;
-    case Qt::Key_P: m_sim.forwardOnce(); break;
-    case Qt::Key_B: m_sim.goToBreakpoint(); break;
     case Qt::Key_Escape: QApplication::quit();
     }
 }
@@ -185,14 +166,16 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event)
 
 void GLWidget::tick()
 {
-    float deltaSeconds = m_deltaTimeProvider.restart() / 1000.f;
-    double curr =0;
+    const double deltaSeconds = m_deltaTimeProvider.restart() * 0.001;
+    const double STEP_SIZE = 0.001;
+    // Take steps of fixed size
+    double curr = 0;
     while (curr < deltaSeconds) {
-        double step = min(.003,deltaSeconds - curr);
-        m_sim.update(step);
+        // Take a step of fixed size or less
+        double step = min(STEP_SIZE, deltaSeconds - curr);
+        m_sim.update( step );
         curr += step;
     }
-
 
     // Move camera
     auto look = m_camera.getLook();
@@ -202,11 +185,7 @@ void GLWidget::tick()
     Eigen::Vector3f moveVec = m_forward * look.normalized() + m_sideways * perp.normalized() + m_vertical * Eigen::Vector3f::UnitY();
     moveVec *= deltaSeconds;
     m_camera.move(moveVec);
-    Vector4f o_h = m_camera.getView() * Vector4f(0,0,0,1);
-    Vector3f o(o_h[0],o_h[1],o_h[2]);
-    Vector4f d_h = m_camera.getView() * Vector4f(m_camera.getLook()[0],m_camera.getLook()[1],m_camera.getLook()[2],0.f);
-    Vector3f d(d_h[0],d_h[1],d_h[2]);
-    m_sim.m_system.updateCameraPos(o,d);
+
     // Flag this view for repainting (Qt will call paintGL() soon after)
     update();
 }

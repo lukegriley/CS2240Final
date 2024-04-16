@@ -37,13 +37,6 @@ add_executable(${PROJECT_NAME}
     src/graphics/meshloader.cpp
     src/graphics/shader.cpp
     src/graphics/shape.cpp
-    src/plant/loader.cpp
-    src/plant/plant.cpp
-    src/plant/write.cpp
-    src/render/line.cpp
-    src/render/cylinder.cpp
-    src/render/waterball.cpp
-    src/render/water.cpp
 
     src/mainwindow.h
     src/simulation.h
@@ -56,17 +49,10 @@ add_executable(${PROJECT_NAME}
 
     util/tiny_obj_loader.h
     util/unsupportedeigenthing/OpenGLSupport
-    src/system.h src/system.cpp
-    src/Types.h
-    src/collider.h src/collider.cpp
-
-
 )
 
 # GLEW: this creates its library and allows you to `#include "GL/glew.h"`
-add_library(StaticGLEW STATIC glew/src/glew.c
-
-)
+add_library(StaticGLEW STATIC glew/src/glew.c)
 include_directories(${PROJECT_NAME} PRIVATE glew/include)
 
 # Specifies libraries to be linked (Qt components, glew, etc)
@@ -91,7 +77,6 @@ qt6_add_resources(${PROJECT_NAME} "Resources"
     PREFIX
         "/"
     FILES
-        resources/shaders/plant.frag
         resources/shaders/shader.frag
         resources/shaders/shader.vert
         example-meshes/single-tet.mesh
