@@ -14,8 +14,8 @@ void write_plant(const std::string &plant_path, const Plant &plant) {
         // Convert to Y-up
         plant_ostream << vertex.index << ","
                       << vertex.tail_position[0] << ","
+                      << vertex.tail_position[1] << ","
                       << vertex.tail_position[2] << ","
-                      << -vertex.tail_position[1] << ","
                       << vertex.radius << ","
                       << static_cast<int>(vertex.on_leaf) << ","
                       << static_cast<int>(vertex.fixed) << std::endl;

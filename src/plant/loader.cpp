@@ -28,12 +28,6 @@ Plant Loader::load_plant(const std::string &plant_path) {
                 >> vertex.tail_position[2] >> expect(',')
                 >> vertex.radius >> expect(',')
                 >> vertex.on_leaf;
-        // Convert to z-up
-        vertex.tail_position = Matrix3d {
-            { 1, 0, 0 },
-            { 0, 0, 1 },
-            { 0, -1, 0 },
-        } * vertex.tail_position;
         // Read optional arguments
         if (plant_istream.get() == ',') {
             plant_istream >> vertex.fixed;

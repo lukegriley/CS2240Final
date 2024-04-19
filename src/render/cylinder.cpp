@@ -85,10 +85,17 @@ void CylinderPlantRenderer::update_colors(const Plant &plant) {
 }
 
 void CylinderPlantRenderer::render(Shader *shader) {
+    // Convert to y-up
+    const Matrix3f toYUp {
+        { 1, 0, 0 },
+        { 0, 0, 1 },
+        { 0, -1, 0 },
+    };
+
     // For each edge, draw a cylinder.
     for (int i = 0; i < this->node_count; ++i) {
         Matrix3f scaleConstant = Matrix3f::Identity() * this->uniform_scale;
-        m_cylinder.setModelMatrix(scaleConstant * this->transformations[i].cast<float>());
+        m_cylinder.setModelMatrix(scaleConstant * toYUp * this->transformations[i].cast<float>());
         shader->setUniform("color", this->colors[i]);
         m_cylinder.draw(shader);
     }

@@ -53,7 +53,15 @@ void LinePlantRenderer::update(const Plant &plant) {
 }
 
 void LinePlantRenderer::render(Shader *shader) const {
-    Matrix4f model = Transform<float, 3, Affine>(Scaling(uniform_scale)).matrix();
+    // Convert to y-up
+    const Matrix3f toYUp {
+        { 1, 0, 0 },
+        { 0, 0, 1 },
+        { 0, -1, 0 },
+    };
+
+    Matrix4f model = Matrix4f::Identity();
+    model.topLeftCorner(3, 3) = toYUp * Scaling(uniform_scale);
     shader->setUniform("model", model);
     Eigen::Matrix3f inverseTransposeModel = 1.f / uniform_scale * Matrix3f::Identity();
     shader->setUniform("inverseTransposeModel", inverseTransposeModel);
