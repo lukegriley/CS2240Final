@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphics/shape.h"
+#include "render/rod.h"
 
 class Shader;
 
@@ -18,6 +19,8 @@ public:
     void toggleWire();
 private:
     Shape m_shape;
+    Tree tree;
+    RodRenderer renderer;
 
     Shape m_ground;
     void initGround();

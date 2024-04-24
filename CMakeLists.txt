@@ -52,6 +52,9 @@ add_executable(${PROJECT_NAME}
     src/graphics/shader.h
     src/graphics/shape.h
 
+    src/rods/rod.cpp
+    src/render/rod.cpp
+
     util/tiny_obj_loader.h
     util/unsupportedeigenthing/OpenGLSupport
     src/system.h src/system.cpp

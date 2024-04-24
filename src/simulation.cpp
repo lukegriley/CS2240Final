@@ -88,10 +88,41 @@ void Simulation::init()
     m_shape.setModelMatrix(Affine3f(Eigen::Translation3f(0, 2, 10)));
 
     // initGround();
+
+    // Create the rod system
+
+    std::vector<Vector3d> positions;
+    std::vector<double> masses;
+    std::vector<std::pair<int, int>> rods;
+    std::vector<double> radii;
+    Vector3d root { 0, 0, 1 };
+    double mass = 1e-6;
+
+    positions.push_back(root);
+    masses.push_back(mass);
+    for (int i = 1; i < 10; ++i) {
+        positions.push_back(root + 0.1 * Vector3d(i, 0, i));
+        masses.push_back(mass);
+        rods.push_back(std::make_pair(i - 1, i));
+        radii.push_back(1e-2);
+    }
+    masses[masses.size() - 1] = mass * 1000;
+    tree.init_particles(positions, masses);
+    tree.init_orientations(rods, radii);
+
+    // Fix a rod
+    tree.rods[0].fixed = true;
+    tree.particles[0].fixed = true;
+    tree.particles[1].fixed = true;
+    renderer.init(tree);
 }
 
 void Simulation::update(double seconds)
 {
+    tree.iterate(seconds);
+    renderer.update(tree);
+    return;
+
     Eigen::MatrixXd x_tilde = x + seconds * v + seconds * seconds * a;
     Eigen::MatrixXd lambda = Eigen::MatrixXd::Zero(1, NUM_VERTEX * C_PER_VERTEX);
     // TODO: replace itr < NUMITR with  L-Infinity Norm
@@ -154,7 +185,8 @@ void Simulation::update(double seconds)
 
 void Simulation::draw(Shader *shader)
 {
-    m_shape.draw(shader);
+    // m_shape.draw(shader);
+    renderer.render(shader);
     m_ground.draw(shader);
 }
 
