@@ -37,9 +37,10 @@ struct Particle {
 };
 
 struct Rod {
-    int index;
+    int index = -1;
     double radius;
     Eigen::Vector3d initial_direction;
+    Eigen::Quaterniond initial_orientation;
     Eigen::Quaterniond orientation;
     Eigen::Vector3d angular_velocity;
     Eigen::Matrix3d inertia;
@@ -47,8 +48,11 @@ struct Rod {
     double inertia_s;
     inline double weight() const { return 1.0 / inertia_s; }
 
-    bool fixed;
-    int parent;
+    Eigen::Vector3d darboux(const Tree &tree, const std::vector<Eigen::Quaterniond> &orientations) const;
+    Eigen::Vector3d initial_darboux(const Tree &tree) const;
+
+    bool fixed = false;
+    int parent = -1;
     int particles[2];
 
     Eigen::Vector3d direction(const Tree &tree) const;
@@ -93,6 +97,10 @@ private:
 
     void generate_collision_constraints();
     void project_constraints(std::vector<Eigen::Vector3d> &new_positions,
-                             std::vector<Eigen::Quaterniond> &new_orientations);
+                             std::vector<Eigen::Quaterniond> &new_orientations) const;
+    void project_stretch_shear_constraints(std::vector<Eigen::Vector3d> &new_positions,
+                             std::vector<Eigen::Quaterniond> &new_orientations) const;
+    void project_bend_twist_constraints(std::vector<Eigen::Vector3d> &new_positions,
+                             std::vector<Eigen::Quaterniond> &new_orientations) const;
 };
 

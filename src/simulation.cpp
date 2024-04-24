@@ -101,12 +101,12 @@ void Simulation::init()
     positions.push_back(root);
     masses.push_back(mass);
     for (int i = 1; i < 10; ++i) {
-        positions.push_back(root + 0.1 * Vector3d(i, 0, i));
+        positions.push_back(root + 0.1 * Vector3d(i, 0, 0));
         masses.push_back(mass);
         rods.push_back(std::make_pair(i - 1, i));
         radii.push_back(1e-2);
     }
-    masses[masses.size() - 1] = mass * 1000;
+    // masses[masses.size() - 1] = mass * 1000;
     tree.init_particles(positions, masses);
     tree.init_orientations(rods, radii);
 

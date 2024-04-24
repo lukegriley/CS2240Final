@@ -4,8 +4,37 @@
 
 using namespace Eigen;
 
+// Use the given vector in quaternion math.
+Quaterniond as_quaternion(const Vector3d &vec) {
+    return Quaterniond(0, vec[0], vec[1], vec[2]);
+}
+
 Vector3d Rod::direction(const Tree &tree) const  {
     return tree.particles[particles[1]].position - tree.particles[particles[0]].position;
+}
+
+Vector3d Rod::darboux(const Tree &tree, const std::vector<Quaterniond> &orientations) const {
+    if (this->parent == -1) {
+        throw std::runtime_error("no parent");
+    }
+
+    const Rod &parent = tree.rods[this->parent];
+    double l = 0.5 * (this->initial_direction.norm() + parent.initial_direction.norm());
+    const Quaterniond &parent_orientation = orientations[this->parent];
+    const Quaterniond &this_orientation = orientations[this->index];
+
+    return 2 / l * (parent_orientation.conjugate() * this_orientation).vec();
+}
+Vector3d Rod::initial_darboux(const Tree &tree) const {
+    if (this->parent == -1) {
+        throw std::runtime_error("no parent");
+    }
+    const Rod &parent = tree.rods[this->parent];
+    double l = 0.5 * (this->initial_direction.norm() + parent.initial_direction.norm());
+    const Quaterniond &parent_orientation = parent.initial_orientation;
+    const Quaterniond &this_orientation = this->initial_orientation;
+
+    return 2 / l * (parent_orientation.conjugate() * this_orientation).vec();
 }
 
 void Tree::init_particles(std::vector<Vector3d> positions, std::vector<double> mass) {
@@ -39,7 +68,7 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
 
     for (int j = 0; j < m; ++j) {
         Rod &rod = this->rods[j];
-        rod.initial_direction = this->particles[rod.particles[1]].position - this->particles[rod.particles[0]].position;
+        rod.initial_direction = rod.direction(*this);
     }
 
     // Compute parents for each rod
@@ -50,9 +79,8 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
         assert(parents[rod.particles[1]] == -1);
         parents[rod.particles[1]] = j;
     }
-    for (int j = 1; j < m; ++j) {
-        assert(parents[this->rods[j].particles[0]] != -1);
-        this->rods[j].parent = parents[this->rods[j].particles[0]];
+    for (Rod &rod : this->rods) {
+        rod.parent = parents[rod.particles[0]];
     }
 
     // Fix the rod's orientation at the root
@@ -64,6 +92,8 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
         const Rod &parent = this->rods[rod.parent];
         // Find the transformation nearest to the parent.
         rod.orientation = Quaterniond::FromTwoVectors(parent.direction(*this), rod.direction(*this)) * parent.orientation;
+        rod.orientation.normalize();
+        rod.initial_orientation = rod.orientation;
     }
 
     // Initialize angular velocity
@@ -74,15 +104,6 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
         // TODO: initialize inertia (mass?)
     }
 
-    // Initialize inertia
-    for (int j = 0; j < m; ++j) {
-        Rod &rod = this->rods[j];
-        double mass = 0.5 * (particles[rod.particles[0]].mass + particles[rod.particles[1]].mass);
-        double radius = 1;
-        double radius4 = radius * radius * radius * radius;
-        // rod.inertia = Matrix3d::Zero();
-        // rod.inverse_inertia = rod.inertia.inverse();
-    }
 
     // Compute simplified scalar inertia
     for (int j = 0; j < m; ++j) {
@@ -97,8 +118,20 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
         double mean = masses[1] / mass * length;
 
         // Assume we rotate around the center of gravity.
-        rod.inertia_s = masses[0] * mean * mean +
-                masses[1] * (length - mean) * (length - mean);
+        rod.inertia_s = masses[0] * masses[1] / (masses[0] + masses[1]) * length * length;
+        // masses[0] * mean * mean +
+        //        masses[1] * (length - mean) * (length - mean);
+    }
+
+    // Initialize inertia
+    for (int j = 0; j < m; ++j) {
+        Rod &rod = this->rods[j];
+        double mass = 0.5 * (particles[rod.particles[0]].mass + particles[rod.particles[1]].mass);
+        double radius = 1;
+        double radius4 = radius * radius * radius * radius;
+        rod.inertia = Matrix3d::Zero();
+        rod.inertia.diagonal() = Vector3d(rod.inertia_s, rod.inertia_s, rod.inertia_s);
+        rod.inverse_inertia = rod.inertia.inverse();
     }
 
 
@@ -116,7 +149,7 @@ void Tree::iterate(double dt) {
     std::vector<Quaterniond> new_orientations = this->iterate_predict_orientation(dt, new_angular_velocities);
 
     // this->generate_collision_constraints(new_positions);
-    int iterations = 10;
+    int iterations = 1000;
     for (int iter = 0; iter < iterations; ++iter) {
         this->project_constraints(new_positions, new_orientations);
     }
@@ -203,11 +236,7 @@ std::vector<Quaterniond> Tree::iterate_predict_orientation(double dt,
         const Quaterniond &q = rod.orientation;
         new_orientations[j] = q;
         if (!rod.fixed) {
-            Quaterniond angular_velocity(
-                        0,
-                        new_angular_velocities[j][0],
-                        new_angular_velocities[j][1],
-                        new_angular_velocities[j][2]);
+            Quaterniond angular_velocity = as_quaternion(new_angular_velocities[j]);
             new_orientations[j].coeffs() += 0.5 * dt * (q * angular_velocity).coeffs();
             new_orientations[j] = new_orientations[j].normalized();
         }
@@ -220,7 +249,13 @@ void Tree::generate_collision_constraints() {
 }
 
 void Tree::project_constraints(std::vector<Vector3d> &new_positions,
-                               std::vector<Quaterniond> &new_orientations) {
+                               std::vector<Quaterniond> &new_orientations) const {
+    this->project_stretch_shear_constraints(new_positions, new_orientations);
+    this->project_bend_twist_constraints(new_positions, new_orientations);
+}
+
+void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_positions,
+                                             std::vector<Quaterniond> &new_orientations) const {
     std::vector<Vector3d> dp(new_positions.size(), Vector3d::Zero());
     std::vector<Quaterniond> dq(new_orientations.size(), Quaterniond(0, 0, 0, 0));
 
@@ -240,18 +275,49 @@ void Tree::project_constraints(std::vector<Vector3d> &new_positions,
 
         double denominator = w1 + w2 + 4 * wq * l * l;
         Vector3d diff = 1 / l * (p2 - p1) - d;
-        Quaterniond diffq(0, diff[0], diff[1], diff[2]); // embed as quaternion
+        Quaterniond diffq = as_quaternion(diff);
         dp[rod.particles[0]] += (w1 * l) / denominator * diff;
         dp[rod.particles[1]] -= (w2 * l) / denominator * diff;
         dq[rod.index].coeffs() += (wq * l * l) / denominator * (diffq * q * conj_e3).coeffs();
     }
 
+    for (int i = 0; i < this->particles.size(); ++i) {
+        new_positions[i] += dp[i];
+    }
+    for (const Rod &rod : rods) {
+        new_orientations[rod.index].coeffs() += dq[rod.index].coeffs();
+        new_orientations[rod.index].normalize();
+    }
+}
+
+
+void Tree::project_bend_twist_constraints(std::vector<Vector3d> &new_positions,
+                                             std::vector<Quaterniond> &new_orientations) const {
+    std::vector<Vector3d> dp(new_positions.size(), Vector3d::Zero());
+    std::vector<Quaterniond> dq(new_orientations.size(), Quaterniond(0, 0, 0, 0));
+
     // Apply bend-twist constraints
-//    for (const Rod &rod : this->rods) {
-//        Quaterniond omega;
-//        Quaterniond omega0;
-//        dq[rod.index] += wq / (wq + wu) * new_position
-//    }
+    for (const Rod &rod : this->rods) {
+        if (rod.parent == -1) {
+            continue;
+        }
+        const Rod &parent = this->rods.at(rod.parent);
+
+        Vector3d darboux = rod.darboux(*this, new_orientations);
+        Vector3d initial_darboux = rod.initial_darboux(*this);
+        // We suppose q is the parent, u is this rod
+        const Quaterniond &q = new_orientations.at(rod.parent);
+        const Quaterniond &u = new_orientations.at(rod.index);
+        double s = (darboux.dot(initial_darboux) > 0) ? 1 : -1;
+        double wq = parent.weight();
+        double wu = rod.weight();
+        Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
+        // Hack fix
+        darboux_diff.coeffs() = 0.01 * darboux_diff.coeffs();
+        dq.at(rod.parent).coeffs() += wq / (wq + wu) * (u * darboux_diff).coeffs();
+        dq.at(rod.index).coeffs() -= wu / (wq + wu) * (q * darboux_diff).coeffs();
+    }
+
     for (int i = 0; i < this->particles.size(); ++i) {
         new_positions[i] += dp[i];
     }
