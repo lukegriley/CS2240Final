@@ -11,7 +11,7 @@ LinePlantRenderer::LinePlantRenderer(const Plant &plant) {
 }
 
 void LinePlantRenderer::init(const Plant &plant) {
-    this->m_num_edges = plant.edges.size();
+    this->m_num_nodes = plant.vertices.size();
 
     // Doesn't always work. We will develop a better renderer soon
     glEnable(GL_LINE_SMOOTH);
@@ -32,28 +32,16 @@ void LinePlantRenderer::init(const Plant &plant) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // Create a data vector with the edges
-    std::vector<std::array<int, 2>> edges(plant.edges.size());
-    for (int i = 0; i < plant.edges.size(); ++i) {
-        edges[i] = plant.edges[i].vertices;
-    }
-    // Fill an IBO with edges
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 sizeof(edges[0]) * plant.edges.size(),
-            static_cast<const void *>(edges.data()),
-            GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
     // Set vertices
     this->update(plant);
 }
 
 void LinePlantRenderer::update(const Plant &plant) {
     // Create a data vector with the vertices
-    std::vector<Vector3f> vertices(plant.vertices.size());
+    std::vector<Vector3f> vertices(2 * plant.vertices.size());
     for (int i = 0; i < plant.vertices.size(); ++i) {
-        vertices[i] = plant.vertices[i].position.cast<float>();
+        vertices[2 * i] = plant.vertices[i].head_position.cast<float>();
+        vertices[2 * i + 1] = plant.vertices[i].tail_position.cast<float>();
     }
     // Fill the VBO with vertex positions
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
@@ -65,17 +53,23 @@ void LinePlantRenderer::update(const Plant &plant) {
 }
 
 void LinePlantRenderer::render(Shader *shader) const {
-    Matrix4f model = Transform<float, 3, Affine>(Scaling(uniform_scale)).matrix();
+    // Convert to y-up
+    const Matrix3f toYUp {
+        { 1, 0, 0 },
+        { 0, 0, 1 },
+        { 0, -1, 0 },
+    };
+
+    Matrix4f model = Matrix4f::Identity();
+    model.topLeftCorner(3, 3) = toYUp * Scaling(uniform_scale);
     shader->setUniform("model", model);
     Eigen::Matrix3f inverseTransposeModel = 1.f / uniform_scale * Matrix3f::Identity();
     shader->setUniform("inverseTransposeModel", inverseTransposeModel);
 
     glBindVertexArray(m_vao);
-    glDrawElements(
-                GL_LINES,
-                2 * m_num_edges,
-                GL_UNSIGNED_INT,
-                nullptr);
+    glDrawArrays(GL_LINES,
+                 0,
+                 2 * m_num_nodes);
     glBindVertexArray(0);
 }
 

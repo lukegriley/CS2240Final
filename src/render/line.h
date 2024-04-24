@@ -16,7 +16,7 @@ struct LinePlantRenderer {
 
     void render(Shader *shader) const;
 private:
-	int m_num_edges;
+    int m_num_nodes;
 
 	GLuint m_vbo;
 	GLuint m_ibo;

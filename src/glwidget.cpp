@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <iostream>
+#include "plant/loader.h"
 
 #define SPEED 1.5
 #define ROTATE_SPEED 0.0025
@@ -62,6 +63,10 @@ void GLWidget::initializeGL()
     // Initialize the shader and simulation
     m_shader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/shader.frag");
     m_sim.init();
+
+    // Initialize plant and renderer
+    m_plant = Loader::load_plant("./data/plants/plant000.txt");
+    m_plantRenderer.init(m_plant);
 
     // Initialize camera with a reasonable transform
     Eigen::Vector3f eye    = {0, 2, -5};
@@ -176,6 +181,9 @@ void GLWidget::tick()
         m_sim.update( step );
         curr += step;
     }
+
+    m_plant.updateDiffusionDelta(deltaSeconds);
+    this->m_plantRenderer.update_colors(m_plant);
 
     // Move camera
     auto look = m_camera.getLook();
