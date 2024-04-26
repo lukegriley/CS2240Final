@@ -148,6 +148,8 @@ void GLWidget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_R: m_vertical += SPEED; break;
     case Qt::Key_C: m_camera.toggleIsOrbiting(); break;
     case Qt::Key_T: m_sim.toggleWire(); break;
+    case Qt::Key_P: m_frames = m_frames == 0 ? -1 : 0; break;
+    case Qt::Key_N: m_frames = std::max(m_frames, 0) + 1; break;
     case Qt::Key_Escape: QApplication::quit();
     }
 }
@@ -172,18 +174,26 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event)
 void GLWidget::tick()
 {
     const double deltaSeconds = m_deltaTimeProvider.restart() * 0.001;
-    const double STEP_SIZE = 0.001;
-    // Take steps of fixed size
-    double curr = 0;
-    while (curr < deltaSeconds) {
-        // Take a step of fixed size or less
-        double step = min(STEP_SIZE, deltaSeconds - curr);
-        m_sim.update( step );
-        curr += step;
-    }
 
-    m_plant.updateDiffusionDelta(deltaSeconds);
-    this->m_plantRenderer.update_colors(m_plant);
+    if (m_frames != 0) {
+        const double STEP_SIZE = 0.001;
+        // deltaSeconds explodes if the calculation is slow, so we fix dt.
+        const double dt = 0.05;
+        // Take steps of fixed size
+        double curr = 0;
+        while (curr < dt) {
+            // Take a step of fixed size or less
+            double step = min(STEP_SIZE, dt - curr);
+            m_sim.update( step );
+            curr += step;
+        }
+
+        m_plant.updateDiffusionDelta(deltaSeconds);
+        this->m_plantRenderer.update_colors(m_plant);
+    }
+    if (m_frames > 0) {
+        m_frames--;
+    }
 
     // Move camera
     auto look = m_camera.getLook();

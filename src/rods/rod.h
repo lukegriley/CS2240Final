@@ -48,15 +48,14 @@ struct Rod {
     double inertia_s;
     inline double weight() const { return 1.0 / inertia_s; }
 
-    Eigen::Vector3d darboux(const Tree &tree, const std::vector<Eigen::Quaterniond> &orientations) const;
-    Eigen::Vector3d initial_darboux(const Tree &tree) const;
+    Eigen::Vector3d initial_darboux;
+    Eigen::Vector3d calculate_initial_darboux(const Tree &tree) const;
 
     bool fixed = false;
     int parent = -1;
     int particles[2];
 
     Eigen::Vector3d direction(const Tree &tree) const;
-
 };
 
 struct Tree {
@@ -67,7 +66,12 @@ struct Tree {
     void init_orientations(std::vector<std::pair<int, int>> rods, std::vector<double> radii);
     void iterate(double dt);
 
+    int num_bend_twist_steps = 20;
+
 private:
+
+    Eigen::Vector3d darboux(const Rod &r1, const Rod &r2,
+                            const std::vector<Eigen::Quaterniond> &orientations) const;
 
     void iterate_predict_velocity(double dt,
                                   std::vector<Eigen::Vector3d> &new_velocities) const;
@@ -100,7 +104,9 @@ private:
                              std::vector<Eigen::Quaterniond> &new_orientations) const;
     void project_stretch_shear_constraints(std::vector<Eigen::Vector3d> &new_positions,
                              std::vector<Eigen::Quaterniond> &new_orientations) const;
-    void project_bend_twist_constraints(std::vector<Eigen::Vector3d> &new_positions,
-                             std::vector<Eigen::Quaterniond> &new_orientations) const;
+    void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations) const;
+    std::pair<Eigen::Quaterniond, Eigen::Quaterniond> project_bend_twist_constraint(
+            const Rod &rod,
+            const std::vector<Eigen::Quaterniond> &new_orientations) const;
 };
 

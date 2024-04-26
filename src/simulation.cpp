@@ -95,16 +95,18 @@ void Simulation::init()
     std::vector<double> masses;
     std::vector<std::pair<int, int>> rods;
     std::vector<double> radii;
-    Vector3d root { 0, 0, 1 };
+    Vector3d root { 1, 0, 2 };
     double mass = 1e-6;
 
     positions.push_back(root);
     masses.push_back(mass);
-    for (int i = 1; i < 10; ++i) {
-        positions.push_back(root + 0.1 * Vector3d(i, 0, 0));
+    int n = 100;
+    for (int i = 1; i < n; ++i) {
+        double angle = 0.4 * i;
+        positions.push_back(root + Vector3d {std::cos(angle) - 1, std::sin(angle), -0.05 * angle});
         masses.push_back(mass);
         rods.push_back(std::make_pair(i - 1, i));
-        radii.push_back(1e-2);
+        radii.push_back(0.01);
     }
     // masses[masses.size() - 1] = mass * 1000;
     tree.init_particles(positions, masses);
@@ -115,10 +117,21 @@ void Simulation::init()
     tree.particles[0].fixed = true;
     tree.particles[1].fixed = true;
     renderer.init(tree);
+
+//    tree.rods.at(n - 2).fixed = true;
+//    tree.particles.at(n - 2).fixed = true;
+//    tree.particles.at(n - 1).fixed = true;
+
+    // Set the number of timesteps
+    tree.num_bend_twist_steps = 20;
 }
 
 void Simulation::update(double seconds)
 {
+//    int n = tree.particles.size();
+//    tree.particles[n - 2].velocity[2] += -tree.particles[n - 2].position[2] * seconds;
+//    tree.particles[n - 1].velocity[2] += -tree.particles[n - 2].position[2] * seconds;
+
     tree.iterate(seconds);
     renderer.update(tree);
     return;

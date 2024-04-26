@@ -49,6 +49,8 @@ private:
     Camera     m_camera;
     Shader    *m_shader;
 
+    int m_frames = -1;
+
     int m_forward;
     int m_sideways;
     int m_vertical;
