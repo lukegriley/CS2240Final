@@ -311,9 +311,11 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
 
         gradient_q(1,3) = quaternion_z.x();
         gradient_q(2,1) = quaternion_z.y();
-        gradient_q(2,2) = quaternion_z.x();
+        gradient_q(2,2) = -quaternion_z.x();
 
-        MatrixXd prod1 = 4 * gradient_q * gradient_q.transpose();
+        gradient_q *= 2;
+
+        MatrixXd prod1 = gradient_q * gradient_q.transpose();
         Vector3d q_diag(prod1(0,0), prod1(1,1), prod1(2,2));
         // double denominator = w1 + w2 + 4 * wq * l * l;  //denominator shoud be vec3, wq(2) is different from wq(0) and wq(1)
         Vector4d prod2 = gradient_q.transpose() * diff;
@@ -321,7 +323,6 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
 
         dq[rod.index].coeffs() += (wq * l * l) / denominator * g_cst_st.coeffs();
 
-        int m = 0;
     }
 
     for (int i = 0; i < this->particles.size(); ++i) {
@@ -376,6 +377,8 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     double s = (darboux.dot(initial_darboux) > 0) ? 1 : -1;
     double wq = parent.weight();
     double wu = rod.weight();
+
+    Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
     Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
     Eigen::Quaterniond dq, du;
     dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
