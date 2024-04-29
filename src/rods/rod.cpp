@@ -262,6 +262,7 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
     std::vector<Vector3d> dp(new_positions.size(), Vector3d::Zero());
     std::vector<Quaterniond> dq(new_orientations.size(), Quaterniond(0, 0, 0, 0));
 
+    // Eigen::MatrixXd lambda = Eigen::MatrixXd::Zero(3, m);
     // Apply stretch-shear constraints
     for (const Rod &rod : this->rods) {
         double w1 = this->particles[rod.particles[0]].weight();
@@ -279,12 +280,48 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
         Quaterniond diffq = as_quaternion(diff);
         dp[rod.particles[0]] += (w1 * l) / denominator * diff;
         dp[rod.particles[1]] -= (w2 * l) / denominator * diff;
-        dq[rod.index].coeffs() += (wq * l * l) / denominator * (diffq * q * conj_e3).coeffs();
+        // dq[rod.index].coeffs() += (wq * l * l) / denominator * (diffq * q * conj_e3).coeffs();
 
-//        new_positions[rod.particles[0]] += (w1 * l) / denominator * diff;
-//        new_positions[rod.particles[1]] -= (w2 * l) / denominator * diff;
-//        new_orientations[rod.index].coeffs() += (wq * l * l) / denominator * (diffq * q * conj_e3).coeffs();
-//        new_orientations[rod.index].normalize();
+        Quaterniond correctq = diffq * q * conj_e3;
+        /*
+         * for q = w + xi + yj + zk
+         * S(v) =
+         *          [0,  -z, y
+         *           z,  0 , -x
+         *           -y, x , 0]
+         * so -s(v) =
+         *          [0,  z, -y
+         *           -z, 0 , x
+         *           y,  x , 0]
+         */
+        Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
+        Quaterniond e3(0, 0, 0, 1);
+        Quaterniond quaternion_z = e3 * q.conjugate();
+        gradient_q(0,0) = quaternion_z.x();
+        gradient_q(1,0) = quaternion_z.y();
+        gradient_q(2,0) = quaternion_z.z();
+
+        gradient_q(0,1) = quaternion_z.w();
+        gradient_q(1,2) = quaternion_z.w();
+        gradient_q(2,3) = quaternion_z.w();
+
+        gradient_q(0,2) = quaternion_z.z();
+        gradient_q(0,3) = -quaternion_z.y();
+        gradient_q(1,1) = -quaternion_z.z();
+
+        gradient_q(1,3) = quaternion_z.x();
+        gradient_q(2,1) = quaternion_z.y();
+        gradient_q(2,2) = quaternion_z.x();
+
+        MatrixXd prod1 = 4 * gradient_q * gradient_q.transpose();
+        Vector3d q_diag(prod1(0,0), prod1(1,1), prod1(2,2));
+        // double denominator = w1 + w2 + 4 * wq * l * l;  //denominator shoud be vec3, wq(2) is different from wq(0) and wq(1)
+        Vector4d prod2 = gradient_q.transpose() * diff;
+        Quaterniond g_cst_st(prod2(0), prod2(1), prod2(2), prod2(3));
+
+        dq[rod.index].coeffs() += (wq * l * l) / denominator * g_cst_st.coeffs();
+
+        int m = 0;
     }
 
     for (int i = 0; i < this->particles.size(); ++i) {
