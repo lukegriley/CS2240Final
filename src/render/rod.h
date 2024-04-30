@@ -20,7 +20,7 @@ private:
     std::vector<Eigen::Affine3d> transformations;
     Shape m_cube;
 
-    float uniform_scale = 3.f;
+    float uniform_scale = 10.f;
 };
 
 

@@ -45,6 +45,7 @@ void Tree::init_particles(std::vector<Vector3d> positions, std::vector<double> m
         particles[i].position = positions[i];
         particles[i].velocity = Vector3d::Zero();
         particles[i].mass = mass[i];
+        assert(mass[i] > 0);
         particles[i].fixed = false;
     }
 
@@ -66,6 +67,7 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
         rod.radius = radii[j];
         rod.fixed = false;
         rod.rest_length = rod.direction(*this).norm();
+        assert(rod.rest_length > 0);
     }
 
     // Compute parents for each rod
@@ -167,7 +169,7 @@ void Tree::init_from_plant(const plant::Plant &plant, double density) {
     using std::numbers::pi;
 
     std::vector<Vector3d> positions(1 + plant.vertices.size());
-    std::vector<double> masses(1 + plant.vertices.size());
+    std::vector<double> masses(1 + plant.vertices.size(), 0);
     std::vector<std::pair<int, int>> rods(plant.vertices.size());
     std::vector<double> radii(plant.vertices.size());
 
@@ -179,7 +181,8 @@ void Tree::init_from_plant(const plant::Plant &plant, double density) {
         double mass = volume * density;
         // Set the particle for the vertex's tail.
         positions[vertex.index + 1] = vertex.tail_position;
-        masses[vertex.index + 1] = mass / 2;
+        masses[vertex.parent + 1] += mass / 2;
+        masses[vertex.index + 1] += mass / 2;
         // Record the vertex as a rod.
         rods[vertex.index] = std::make_pair(vertex.parent + 1, vertex.index + 1);
         radii[vertex.index] = vertex.radius;
@@ -409,6 +412,8 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
         // // update position
         dp[rod.particles[0]] += w1 / l * delta_lambda;
         dp[rod.particles[1]] -= w2 / l * delta_lambda;
+        assert(dp[rod.particles[0]].allFinite());
+        assert(dp[rod.particles[1]].allFinite());
         i++;
     }
 
@@ -416,6 +421,7 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
         new_positions[i] += dp[i];
     }
     for (const Rod &rod : rods) {
+        assert(dq[rod.index].coeffs().allFinite());
         new_orientations[rod.index].coeffs() += dq[rod.index].coeffs();
         new_orientations[rod.index].normalize();
     }
@@ -427,7 +433,7 @@ void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientat
     // Do this over multiple iterations for stability
     // We apply these in an interleaving order.
     int intr = 0;
-    for (int j = 1; j < this->rods.size(); ++j) {
+    for (int j = 0; j < this->rods.size(); ++j) {
         // Note: the +1 and -1 are there to skip over the first fixed rod.
         // In the future, we would want to generalize this to trees.
         int rod_index = 1 + interleave(this->rods.size() - 1, j - 1);

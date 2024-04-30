@@ -22,7 +22,7 @@ void Simulation::init()
     m_plantRenderer.init(m_plant);
 
     // Create the rod system
-    double density = 1;
+    double density = 7800;
     tree.init_from_plant(plant, density);
 
 //    std::vector<Vector3d> positions;
