@@ -1,30 +1,13 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include <plant/plant.h>
+
+namespace rod {
 
 struct Particle;
 struct Rod;
 struct Tree;
-
-struct Constraint {
-    virtual double operator()(
-            const Tree &tree,
-            const std::vector<Eigen::Vector3d> &new_positions,
-            const std::vector<Eigen::Vector3d> &new_orientations) const = 0;
-    virtual std::vector<std::pair<int, Eigen::Vector3d>>
-    position_gradient(
-            int index,
-            const Tree &tree,
-            const std::vector<Eigen::Vector3d> &new_positions,
-            const std::vector<Eigen::Vector3d> &new_orientations) const = 0;
-    virtual std::vector<std::pair<int, Eigen::Quaterniond>>
-    orientation_gradient(
-            int index,
-            const Tree &tree,
-            const std::vector<Eigen::Vector3d> &new_positions,
-            const std::vector<Eigen::Vector3d> &new_orientations) const = 0;
-};
-
 
 struct Particle {
     int index;
@@ -39,7 +22,7 @@ struct Particle {
 struct Rod {
     int index = -1;
     double radius;
-    Eigen::Vector3d initial_direction;
+    double rest_length;
     Eigen::Quaterniond initial_orientation;
     Eigen::Quaterniond orientation;
     Eigen::Vector3d angular_velocity;
@@ -65,9 +48,11 @@ struct Tree {
     std::vector<Eigen::Vector3d> lambda_twist;
     void init_particles(std::vector<Eigen::Vector3d> positions, std::vector<double> mass);
     void init_orientations(std::vector<std::pair<int, int>> rods, std::vector<double> radii);
+    void init_from_plant(const plant::Plant &plant, double density);
     void iterate(double dt);
 
     int num_bend_twist_steps = 20;
+    Eigen::Vector3d gravity {0, 0, 0};
 
 private:
 
@@ -111,3 +96,4 @@ private:
             const std::vector<Eigen::Quaterniond> &new_orientations, int iter);
 };
 
+}

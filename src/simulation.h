@@ -1,5 +1,7 @@
 #pragma once
 
+#include "plant/plant.h"
+#include "render/cylinder.h"
 #include "graphics/shape.h"
 #include "render/rod.h"
 
@@ -19,7 +21,9 @@ public:
     void toggleWire();
 private:
     Shape m_shape;
-    Tree tree;
+    water::Plant m_plant;
+    CylinderPlantRenderer m_plantRenderer;
+    rod::Tree tree;
     RodRenderer renderer;
 
     Shape m_ground;

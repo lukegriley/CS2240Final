@@ -4,17 +4,17 @@
 
 #include "graphics/shader.h"
 #include "graphics/shape.h"
-#include "plant/plant.h"
+#include "water/plant.h"
 
 // A PlantRenderer that draws cylinders for vessels
 struct CylinderPlantRenderer {
     CylinderPlantRenderer();
-    CylinderPlantRenderer(const Plant &plant);
+    CylinderPlantRenderer(const water::Plant &plant);
     CylinderPlantRenderer(const CylinderPlantRenderer &renderer) = delete;
 
-    void init(const Plant &plant);
-    void update(const Plant &plant);
-    void update_colors(const Plant &plant);
+    void init(const water::Plant &plant);
+    void update(const water::Plant &plant);
+    void update_colors(const water::Plant &plant);
     void render(Shader *shader);
 private:
     int node_count;

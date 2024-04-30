@@ -6,6 +6,7 @@
 #include "util/unsupportedeigenthing/OpenGLSupport"
 
 using namespace Eigen;
+using namespace water;
 
 CylinderPlantRenderer::CylinderPlantRenderer() {
 }
@@ -27,12 +28,12 @@ void CylinderPlantRenderer::init(const Plant &plant) {
 }
 
 void CylinderPlantRenderer::update(const Plant &plant) {
-    this->node_count = plant.vertex_count;
-    this->transformations.resize(plant.vertex_count);
+    this->node_count = plant.segments.size();
+    this->transformations.resize(this->node_count);
     // Set the transformation matrix as a uniform variable
-    for (const Vertex &vertex : plant.vertices) {
-        double radius = vertex.radius;
-        Vector3d growth = vertex.tail_position - vertex.head_position;
+    for (const Segment &segment : plant.segments) {
+        double radius = segment.radius;
+        Vector3d growth = segment.tail_position - segment.head_position;
 
         // Construct a scaling matrix for the radius and length
         DiagonalMatrix<double, 3> scale(radius, radius, growth.norm());
@@ -50,9 +51,9 @@ void CylinderPlantRenderer::update(const Plant &plant) {
         assert((rotation * rotation.transpose() - Matrix3d::Identity()).cwiseAbs().maxCoeff() < 1e-3);
 
         // Construct a translation matrix to vertices[0]
-        Translation3d translation(vertex.head_position);
+        Translation3d translation(segment.head_position);
 
-        this->transformations[vertex.index] = translation * rotation * scale;
+        this->transformations[segment.index] = translation * rotation * scale;
     }
 
     this->update_colors(plant);
@@ -60,25 +61,25 @@ void CylinderPlantRenderer::update(const Plant &plant) {
 
 void CylinderPlantRenderer::update_colors(const Plant &plant) {
     // Initialize colors
-    this->colors.resize(plant.vertex_count);
-    for (const Vertex &vertex : plant.vertices) {
-        float density = vertex.water_amt / vertex.volume;
+    this->colors.resize(plant.segments.size());
+    for (const Segment &segment : plant.segments) {
+        float density = segment.water_amt / segment.volume;
         // Clamp density
         density = std::min(std::max(density, 0.0f), 1.99f);
         // Split 0-2 into 4 pieces for red-green and green-blue.
         float H = 2 * density;
         switch (static_cast<int>(std::floor(H))) {
         case 0:
-            this->colors[vertex.index] = Vector3f(1.0f, H - 0, 0.0f);
+            this->colors[segment.index] = Vector3f(1.0f, H - 0, 0.0f);
             break;
         case 1:
-            this->colors[vertex.index] = Vector3f(1.0f - (H - 1), 1.0f, 0.0f);
+            this->colors[segment.index] = Vector3f(1.0f - (H - 1), 1.0f, 0.0f);
             break;
         case 2:
-            this->colors[vertex.index] = Vector3f(0.0f, 1.0f, H - 2);
+            this->colors[segment.index] = Vector3f(0.0f, 1.0f, H - 2);
             break;
         case 3:
-            this->colors[vertex.index] = Vector3f(0.0f, 1.0f - (H - 3), 1.0f);
+            this->colors[segment.index] = Vector3f(0.0f, 1.0f - (H - 3), 1.0f);
             break;
         }
     }

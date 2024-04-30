@@ -1,11 +1,14 @@
-#include "rod.h"
+#include "rods/rod.h"
 
 #include <iostream>
 #include <stack>
 
+#include <plant/plant.h>
 #include "rods/util.h"
 
 using namespace Eigen;
+
+namespace rod {
 
 // Use the given vector in quaternion math.
 Quaterniond as_quaternion(const Vector3d &vec) {
@@ -17,7 +20,7 @@ Vector3d Rod::direction(const Tree &tree) const  {
 }
 
 Vector3d Tree::darboux(const Rod &r1, const Rod &r2, const std::vector<Quaterniond> &orientations) const {
-    double l = 0.5 * (r1.initial_direction.norm() + r2.initial_direction.norm());
+    double l = 0.5 * (r1.rest_length + r2.rest_length);
     return 2 / l * (orientations[r1.index].conjugate() * orientations[r2.index]).vec();
 }
 
@@ -26,7 +29,7 @@ Vector3d Rod::calculate_initial_darboux(const Tree &tree) const {
         throw std::runtime_error("no parent");
     }
     const Rod &parent = tree.rods[this->parent];
-    double l = 0.5 * (this->initial_direction.norm() + parent.initial_direction.norm());
+    double l = 0.5 * (this->rest_length + parent.rest_length);
     const Quaterniond &parent_orientation = parent.initial_orientation;
     const Quaterniond &this_orientation = this->initial_orientation;
 
@@ -62,12 +65,7 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
         rod.particles[1] = std::get<1>(rods[j]);
         rod.radius = radii[j];
         rod.fixed = false;
-    }
-
-
-    for (int j = 0; j < m; ++j) {
-        Rod &rod = this->rods[j];
-        rod.initial_direction = rod.direction(*this);
+        rod.rest_length = rod.direction(*this).norm();
     }
 
     // Compute parents for each rod
@@ -141,9 +139,7 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
             0.5 * particles[rod.particles[0]].mass,
             0.5 * particles[rod.particles[1]].mass,
         };
-        double mass = masses[0] + masses[1];
         double length = rod.direction(*this).norm();
-        double mean = masses[1] / mass * length;
 
         // Assume we rotate around the center of gravity.
         rod.inertia_s = masses[0] * masses[1] / (masses[0] + masses[1]) * length * length;
@@ -154,9 +150,6 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
     // Initialize inertia
     for (int j = 0; j < m; ++j) {
         Rod &rod = this->rods[j];
-        double mass = 0.5 * (particles[rod.particles[0]].mass + particles[rod.particles[1]].mass);
-        double radius = 1;
-        double radius4 = radius * radius * radius * radius;
         rod.inertia = Matrix3d::Zero();
         rod.inertia.diagonal() = Vector3d(rod.inertia_s, rod.inertia_s, rod.inertia_s);
         rod.inverse_inertia = rod.inertia.inverse();
@@ -167,6 +160,43 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
     for (Rod &rod : this->rods) {
         if (rod.parent != -1)
             rod.initial_darboux = rod.calculate_initial_darboux(*this);
+    }
+}
+
+void Tree::init_from_plant(const plant::Plant &plant, double density) {
+    using std::numbers::pi;
+
+    std::vector<Vector3d> positions(1 + plant.vertices.size());
+    std::vector<double> masses(1 + plant.vertices.size());
+    std::vector<std::pair<int, int>> rods(plant.vertices.size());
+    std::vector<double> radii(plant.vertices.size());
+
+    // Initialize first position to be zero
+    positions[0] = Vector3d::Zero();
+
+    for (const plant::Vertex &vertex : plant.vertices) {
+        double volume = vertex.direction(plant).norm() * pi * vertex.radius * vertex.radius;
+        double mass = volume * density;
+        // Set the particle for the vertex's tail.
+        positions[vertex.index + 1] = vertex.tail_position;
+        masses[vertex.index + 1] = mass / 2;
+        // Record the vertex as a rod.
+        rods[vertex.index] = std::make_pair(vertex.parent + 1, vertex.index + 1);
+        radii[vertex.index] = vertex.radius;
+    }
+
+    this->init_particles(positions, masses);
+    this->init_orientations(rods, radii);
+
+    // Fix the root
+    this->particles[0].fixed = true;
+    // Fix specified rods
+    for (const plant::Vertex &vertex : plant.vertices) {
+        if (vertex.fixed) {
+            this->particles[vertex.parent + 1].fixed = true;
+            this->particles[vertex.index + 1].fixed = true;
+            this->rods[vertex.index].fixed = true;
+        }
     }
 }
 
@@ -226,7 +256,7 @@ void Tree::iterate_predict_velocity(double dt,
     for (int i = 0; i < n; ++i) {
         new_velocities[i] = particles[i].velocity;
         if (!particles[i].fixed) {
-            Vector3d external_force = this->particles[i].mass * Vector3d(0.0, 0.0, -1);
+            Vector3d external_force = this->particles[i].mass * this->gravity;
             new_velocities[i] += dt * particles[i].weight() * external_force;
         }
     }
@@ -310,19 +340,10 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
         double wq = rod.weight();
         const Vector3d &p1 = new_positions[rod.particles[0]];
         const Vector3d &p2 = new_positions[rod.particles[1]];
-        double l = rod.initial_direction.norm();
+        double l = rod.rest_length;
         const Quaterniond &q = new_orientations[rod.index];
         Vector3d d = q * Vector3d(0, 0, 1);
 
-        // Quaterniond conj_e3(0, 0, 0, -1);
-
-        // double denominator = w1 + w2 + 4 * wq * l * l;
-        // Vector3d diff = 1 / l * (p2 - p1) - d;
-        // Quaterniond diffq = as_quaternion(diff);
-
-        // dp[rod.particles[0]] += (w1 * l) / denominator * diff;
-        // dp[rod.particles[1]] -= (w2 * l) / denominator * diff;
-        // dq[rod.index].coeffs() += (wq * l * l) / denominator * (diffq * q * conj_e3).coeffs();
         // --------------------------------------------------------------------------------------
         Quaterniond e3(0, 0, 0, 1);
         Quaterniond quat_z = e3 * q.conjugate();
@@ -447,8 +468,6 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     Eigen::Quaterniond dq, du;
 
     Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
-    // dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
-    // du.coeffs() = -wu / (wq + wu) * (q * darboux_diff).coeffs();
 
     // --------------------------------------------------------
     // Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
@@ -526,3 +545,4 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     return std::make_pair(dq, du);
 }
 
+}

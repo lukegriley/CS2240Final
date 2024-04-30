@@ -26,6 +26,27 @@ find_package(Qt6 REQUIRED COMPONENTS Gui)
 include_directories(src)
 include_directories(libs)
 
+add_library(plant
+    STATIC
+    src/plant/loader.cpp
+    src/plant/plant.cpp)
+
+add_library(waterdiffusion
+    STATIC
+    src/water/plant.cpp
+    src/water/loader.cpp
+    src/water/write.cpp)
+
+target_link_libraries(waterdiffusion
+    plant)
+
+add_library(stiffrod
+    STATIC
+    src/rods/rod.cpp)
+
+target_link_libraries(stiffrod
+    plant)
+
 # Specifies .cpp and .h files to be passed to the compiler
 add_executable(${PROJECT_NAME}
     src/main.cpp
@@ -37,11 +58,9 @@ add_executable(${PROJECT_NAME}
     src/graphics/meshloader.cpp
     src/graphics/shader.cpp
     src/graphics/shape.cpp
-    src/plant/loader.cpp
-    src/plant/plant.cpp
-    src/plant/write.cpp
     src/render/line.cpp
     src/render/cylinder.cpp
+    src/render/rod.cpp
 
     src/mainwindow.h
     src/simulation.h
@@ -51,9 +70,6 @@ add_executable(${PROJECT_NAME}
     src/graphics/meshloader.h
     src/graphics/shader.h
     src/graphics/shape.h
-
-    src/rods/rod.cpp
-    src/render/rod.cpp
 
     util/tiny_obj_loader.h
     util/unsupportedeigenthing/OpenGLSupport
@@ -77,6 +93,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt::Widgets
     Qt::Xml
     StaticGLEW
+    waterdiffusion
+    stiffrod
 )
 
 # Include OpenMP
@@ -89,6 +107,23 @@ endif()
 target_include_directories(${PROJECT_NAME} PRIVATE
     Eigen
 )
+
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
+
+# Include PBD library
+# Be sure to install it beforehand.
+# Note: this currently does nothing
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+find_package(PositionBasedDynamics REQUIRED)
+if(PositionBasedDynamics_FOUND)
+    target_include_directories(${PROJECT_NAME} ${PositionBasedDynamics_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${PositionBasedDynamics_LIBRARIES})
+endif()
+
 
 # Specifies other files
 qt6_add_resources(${PROJECT_NAME} "Resources"

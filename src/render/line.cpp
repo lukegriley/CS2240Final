@@ -6,12 +6,12 @@
 
 using namespace Eigen;
 
-LinePlantRenderer::LinePlantRenderer(const Plant &plant) {
+LinePlantRenderer::LinePlantRenderer(const water::Plant &plant) {
     this->init(plant);
 }
 
-void LinePlantRenderer::init(const Plant &plant) {
-    this->m_num_nodes = plant.vertices.size();
+void LinePlantRenderer::init(const water::Plant &plant) {
+    this->m_num_nodes = plant.segments.size();
 
     // Doesn't always work. We will develop a better renderer soon
     glEnable(GL_LINE_SMOOTH);
@@ -36,18 +36,18 @@ void LinePlantRenderer::init(const Plant &plant) {
     this->update(plant);
 }
 
-void LinePlantRenderer::update(const Plant &plant) {
+void LinePlantRenderer::update(const water::Plant &plant) {
     // Create a data vector with the vertices
-    std::vector<Vector3f> vertices(2 * plant.vertices.size());
-    for (int i = 0; i < plant.vertices.size(); ++i) {
-        vertices[2 * i] = plant.vertices[i].head_position.cast<float>();
-        vertices[2 * i + 1] = plant.vertices[i].tail_position.cast<float>();
+    std::vector<Vector3f> segments(2 * plant.segments.size());
+    for (int i = 0; i < plant.segments.size(); ++i) {
+        segments[2 * i] = plant.segments[i].head_position.cast<float>();
+        segments[2 * i + 1] = plant.segments[i].tail_position.cast<float>();
     }
     // Fill the VBO with vertex positions
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(vertices[0]) * vertices.size(),
-            static_cast<const void *>(vertices.data()),
+                 sizeof(segments[0]) * segments.size(),
+            static_cast<const void *>(segments.data()),
             GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

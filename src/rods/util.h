@@ -1,5 +1,7 @@
 #pragma once
 
+namespace rod {
+
 int interleave_even(int n, int i) {
     assert(n % 2 == 0);
     if (i % 2 == 0) {
@@ -21,3 +23,6 @@ int interleave(int n, int i) {
         }
     }
 }
+
+}
+

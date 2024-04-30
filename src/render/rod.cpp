@@ -1,11 +1,13 @@
 #include "rod.h"
 
 #include <iostream>
+#include <GL/glew.h>
 
 #include "graphics/meshloader.h"
 #include "util/unsupportedeigenthing/OpenGLSupport"
 
 using namespace Eigen;
+using namespace rod;
 
 RodRenderer::RodRenderer() {
 }
@@ -60,7 +62,7 @@ void RodRenderer::render(Shader *shader) {
 
     // For each edge, draw a cylinder.
     for (int i = 0; i < this->rod_count; ++i) {
-        m_cube.setModelMatrix(toYUp * this->transformations[i].cast<float>());
+        m_cube.setModelMatrix(toYUp * uniform_scale * this->transformations[i].cast<float>());
         // TODO: set the color as a uniform variable
         m_cube.draw(shader);
     }
