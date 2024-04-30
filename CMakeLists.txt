@@ -79,6 +79,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     StaticGLEW
 )
 
+# Include OpenMP
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
 # This allows you to `#include "Eigen/..."`
 target_include_directories(${PROJECT_NAME} PRIVATE
     Eigen
