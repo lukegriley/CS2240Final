@@ -55,10 +55,6 @@ struct Tree {
     Eigen::Vector3d gravity {0, 0, 0};
 
 private:
-
-    Eigen::Vector3d darboux(const Rod &r1, const Rod &r2,
-                            const std::vector<Eigen::Quaterniond> &orientations) const;
-
     void iterate_predict_velocity(double dt,
                                   std::vector<Eigen::Vector3d> &new_velocities) const;
 
@@ -93,7 +89,8 @@ private:
     void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations);
     std::pair<Eigen::Quaterniond, Eigen::Quaterniond> project_bend_twist_constraint(
             const Rod &rod,
-            const std::vector<Eigen::Quaterniond> &new_orientations, int iter);
+            const Eigen::Quaterniond &q, const Eigen::Quaterniond &u,
+            int iter);
 };
 
 }

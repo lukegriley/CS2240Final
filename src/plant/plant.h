@@ -7,11 +7,11 @@ namespace plant {
 struct Plant;
 
 struct Vertex {
-    int index;
+    int index = -1;
     Eigen::Vector3d tail_position;
     double radius;
-    bool on_leaf;
-    bool fixed;
+    bool on_leaf = false;
+    bool fixed = false;
 
     std::vector<int> edges;
     int parent = -1;
@@ -22,7 +22,7 @@ struct Vertex {
 };
 
 struct Edge {
-    int index;
+    int index = -1;
     std::array<int, 2> vertices;
 };
 

@@ -38,6 +38,7 @@ add_library(waterdiffusion
     src/water/write.cpp)
 
 target_link_libraries(waterdiffusion
+    PRIVATE
     plant)
 
 add_library(stiffrod
@@ -45,6 +46,7 @@ add_library(stiffrod
     src/rods/rod.cpp)
 
 target_link_libraries(stiffrod
+    PRIVATE
     plant)
 
 # Specifies .cpp and .h files to be passed to the compiler
@@ -110,7 +112,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(waterdiffusion PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(stiffrod PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
 

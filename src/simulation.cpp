@@ -29,7 +29,7 @@ void Simulation::init()
 //    std::vector<double> masses;
 //    std::vector<std::pair<int, int>> rods;
 //    std::vector<double> radii;
-//    Vector3d root { 1, 0, 2 };
+//    Vector3d root { 0.1, 0, 0.2 };
 //    double mass = 1e-6;
 
 //    positions.push_back(root);
@@ -37,10 +37,10 @@ void Simulation::init()
 //    int n = 100;
 //    for (int i = 1; i < n; ++i) {
 //        double angle = 0.4 * i;
-//        positions.push_back(root + Vector3d {std::cos(angle) - 1, std::sin(angle), -0.05 * angle});
+//        positions.push_back(root + 0.05 * Vector3d {std::cos(angle) - 1, std::sin(angle), -0.05 * angle});
 //        masses.push_back(mass);
 //        rods.push_back(std::make_pair(i - 1, i));
-//        radii.push_back(0.01);
+//        radii.push_back(0.001);
 //    }
 //    // masses[masses.size() - 1] = mass * 1000;
 //    tree.init_particles(positions, masses);
@@ -55,7 +55,7 @@ void Simulation::init()
     renderer.init(tree);
 
     // Set the number of timesteps
-    tree.num_bend_twist_steps = 20;
+    tree.num_bend_twist_steps = 1;
 }
 
 void Simulation::update(double seconds)

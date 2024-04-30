@@ -5,6 +5,7 @@
 
 #include <plant/plant.h>
 #include "rods/util.h"
+#include <omp.h>
 
 using namespace Eigen;
 
@@ -19,9 +20,8 @@ Vector3d Rod::direction(const Tree &tree) const  {
     return tree.particles[particles[1]].position - tree.particles[particles[0]].position;
 }
 
-Vector3d Tree::darboux(const Rod &r1, const Rod &r2, const std::vector<Quaterniond> &orientations) const {
-    double l = 0.5 * (r1.rest_length + r2.rest_length);
-    return 2 / l * (orientations[r1.index].conjugate() * orientations[r2.index]).vec();
+Vector3d calulate_darboux(const Quaterniond &q1, const Quaterniond &q2) {
+    return (q1.conjugate() * q2).vec();
 }
 
 Vector3d Rod::calculate_initial_darboux(const Tree &tree) const {
@@ -29,11 +29,10 @@ Vector3d Rod::calculate_initial_darboux(const Tree &tree) const {
         throw std::runtime_error("no parent");
     }
     const Rod &parent = tree.rods[this->parent];
-    double l = 0.5 * (this->rest_length + parent.rest_length);
+
     const Quaterniond &parent_orientation = parent.initial_orientation;
     const Quaterniond &this_orientation = this->initial_orientation;
-
-    return 2 / l * (parent_orientation.conjugate() * this_orientation).vec();
+    return calulate_darboux(parent_orientation, this_orientation);
 }
 
 void Tree::init_particles(std::vector<Vector3d> positions, std::vector<double> mass) {
@@ -180,12 +179,12 @@ void Tree::init_from_plant(const plant::Plant &plant, double density) {
         double volume = vertex.direction(plant).norm() * pi * vertex.radius * vertex.radius;
         double mass = volume * density;
         // Set the particle for the vertex's tail.
-        positions[vertex.index + 1] = vertex.tail_position;
-        masses[vertex.parent + 1] += mass / 2;
-        masses[vertex.index + 1] += mass / 2;
+        positions.at(vertex.index + 1) = vertex.tail_position;
+        masses.at(vertex.parent + 1) += mass / 2;
+        masses.at(vertex.index + 1) += mass / 2;
         // Record the vertex as a rod.
-        rods[vertex.index] = std::make_pair(vertex.parent + 1, vertex.index + 1);
-        radii[vertex.index] = vertex.radius;
+        rods.at(vertex.index) = std::make_pair(vertex.parent + 1, vertex.index + 1);
+        radii.at(vertex.index) = vertex.radius;
     }
 
     this->init_particles(positions, masses);
@@ -196,11 +195,20 @@ void Tree::init_from_plant(const plant::Plant &plant, double density) {
     // Fix specified rods
     for (const plant::Vertex &vertex : plant.vertices) {
         if (vertex.fixed) {
-            this->particles[vertex.parent + 1].fixed = true;
-            this->particles[vertex.index + 1].fixed = true;
-            this->rods[vertex.index].fixed = true;
+            this->particles.at(vertex.parent + 1).fixed = true;
+            this->particles.at(vertex.index + 1).fixed = true;
+            this->rods.at(vertex.index).fixed = true;
         }
     }
+    // Fix the root cylinder
+    for (const plant::Vertex &vertex : plant.vertices) {
+        if (vertex.parent == -1) {
+            this->particles.at(vertex.parent + 1).fixed = true;
+            this->particles.at(vertex.index + 1).fixed = true;
+            this->rods.at(vertex.index).fixed = true;
+        }
+    }
+
 }
 
 void Tree::iterate(double dt) {
@@ -222,8 +230,6 @@ void Tree::iterate(double dt) {
     // Record positions and orientations of fixed entities.
     std::vector<Vector3d> fixed_positions = new_positions;
     std::vector<Quaterniond> fixed_orientations = new_orientations;
-
-
 
     // this->generate_collision_constraints(new_positions);
     int iterations = 10;
@@ -433,40 +439,49 @@ void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientat
     // Do this over multiple iterations for stability
     // We apply these in an interleaving order.
     int intr = 0;
+
     for (int j = 0; j < this->rods.size(); ++j) {
         // Note: the +1 and -1 are there to skip over the first fixed rod.
         // In the future, we would want to generalize this to trees.
-        int rod_index = 1 + interleave(this->rods.size() - 1, j - 1);
+        int rod_index = interleave(this->rods.size(), j);
+        rod_index = std::rand() % this->rods.size();
         const Rod &rod = this->rods.at(rod_index);
         if (rod.parent == -1) {
             continue;
         }
+        Quaterniond q = new_orientations[rod.parent];
+        Quaterniond u = new_orientations[rod.index];
 
         int num_steps = num_bend_twist_steps;
         for (int i = 0; i < num_steps; ++i) {
             Quaterniond dq, du;
-            std::tie(dq, du) = this->project_bend_twist_constraint(rod, new_orientations, intr);
+            std::tie(dq, du) = this->project_bend_twist_constraint(rod, q, u, intr);
 
-            new_orientations[rod.parent].coeffs() = (new_orientations[rod.parent].coeffs() + 1.0 / num_steps * dq.coeffs()).normalized();
-            new_orientations[rod.index].coeffs() = (new_orientations[rod.index].coeffs() + 1.0 / num_steps * du.coeffs()).normalized();
+            q = (q.coeffs() + 1.0 / num_steps * dq.coeffs()).normalized();
+            u = (u.coeffs() + 1.0 / num_steps * du.coeffs()).normalized();
+
         }
         intr++;
+
+        new_orientations[rod.parent] = q;
+        new_orientations[rod.index] = u;
     }
+
 }
 
 
 std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
         const Rod &rod,
-        const std::vector<Quaterniond> &new_orientations, int iter) {
+        const Quaterniond &q,
+        const Quaterniond &u,
+        int iter) {
 
     assert(rod.parent != -1);
     const Rod &parent = this->rods.at(rod.parent);
 
-    Vector3d darboux = this->darboux(parent, rod, new_orientations);
+    Vector3d darboux = calulate_darboux(q, u);
     Vector3d initial_darboux = rod.initial_darboux;
     // We suppose q is the parent, u is this rod
-    const Quaterniond &q = new_orientations.at(rod.parent);
-    const Quaterniond &u = new_orientations.at(rod.index);
     double s = (darboux.dot(initial_darboux) > 0) ? 1 : -1;
     double wq = parent.weight();
     double wu = rod.weight();
