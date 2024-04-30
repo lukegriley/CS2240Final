@@ -178,7 +178,7 @@ void System::applyCollisionPenalty() {
 
 void System::applyInternalForces() {
     // #pragma omp parallel for default(none) shared(m_tets) private(i, t, P, F, VP, V, strain, strain_rate, elastic_stress, viscous_damping, stress, force012, force013, force023, force123, force0, force1, force2, force3)
-#pragma omp for parallel
+#pragma omp parallel for
     for(int i=0;i<m_tets.size();i++){
         Tet *t = m_tets[i];
         // updateTetAreasAndNormals(t);
