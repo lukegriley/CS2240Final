@@ -379,10 +379,46 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     double wu = rod.weight();
 
     Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
-    Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
+    gradient_q(0,0) = -u.x();
+    gradient_q(1,0) = -u.y();
+    gradient_q(2,0) = -u.z();
+    gradient_q(0,1) = u.w();
+    gradient_q(1,2) = u.w();
+    gradient_q(2,3) = u.w();
+    gradient_q(0,2) = u.z();
+    gradient_q(0,3) = -u.y();
+    gradient_q(1,1) = -u.z();
+    gradient_q(1,3) = u.x();
+    gradient_q(2,1) = u.y();
+    gradient_q(2,2) = -u.x();
+
+    Eigen::MatrixXd gradient_u = Eigen::MatrixXd::Zero(3, 4);
+    gradient_u(0,0) = -q.x();
+    gradient_u(1,0) = -q.y();
+    gradient_u(2,0) = -q.z();
+    gradient_u(0,1) = q.w();
+    gradient_u(1,2) = q.w();
+    gradient_u(2,3) = q.w();
+    gradient_u(0,2) = q.z();
+    gradient_u(0,3) = -q.y();
+    gradient_u(1,1) = -q.z();
+    gradient_u(1,3) = q.x();
+    gradient_u(2,1) = q.y();
+    gradient_u(2,2) = -q.x();
+    gradient_u *= -1;
+
+    Vector4d prod_q = gradient_q.transpose() * (darboux - s * initial_darboux);
+    Quaterniond g_cst_st_q(prod_q(0),prod_q(1),prod_q(2),prod_q(3));
+
+    Vector4d prod_u = gradient_u.transpose() * (darboux - s * initial_darboux);
+    Quaterniond g_cst_st_u(prod_u(0),prod_u(1),prod_u(2),prod_u(3));
+
+    // Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
     Eigen::Quaterniond dq, du;
-    dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
-    du.coeffs() = -wu / (wq + wu) * (q * darboux_diff).coeffs();
+    // dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
+    // du.coeffs() = -wu / (wq + wu) * (q * darboux_diff).coeffs();
+    dq.coeffs() = wq / (wq + wu) * (g_cst_st_q).coeffs();
+    du.coeffs() = wu / (wq + wu) * (g_cst_st_u).coeffs();
 
     return std::make_pair(dq, du);
 }
