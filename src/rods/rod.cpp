@@ -371,12 +371,12 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
 }
 
 
-void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientations) const {
+void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientations) {
     // Apply bend-twist constraints
     // Do this over multiple iterations for stability
     // We apply these in an interleaving order.
+    int intr = 0;
     for (int j = 1; j < this->rods.size(); ++j) {
-
         // Note: the +1 and -1 are there to skip over the first fixed rod.
         // In the future, we would want to generalize this to trees.
         int rod_index = 1 + interleave(this->rods.size() - 1, j - 1);
@@ -389,18 +389,19 @@ void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientat
         int num_steps = num_bend_twist_steps;
         for (int i = 0; i < num_steps; ++i) {
             Quaterniond dq, du;
-            std::tie(dq, du) = this->project_bend_twist_constraint(rod, new_orientations);
+            std::tie(dq, du) = this->project_bend_twist_constraint(rod, new_orientations, intr);
 
             new_orientations[rod.parent].coeffs() = (new_orientations[rod.parent].coeffs() + 1.0 / num_steps * dq.coeffs()).normalized();
             new_orientations[rod.index].coeffs() = (new_orientations[rod.index].coeffs() + 1.0 / num_steps * du.coeffs()).normalized();
         }
+        intr++;
     }
 }
 
 
 std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
         const Rod &rod,
-        const std::vector<Quaterniond> &new_orientations) const {
+        const std::vector<Quaterniond> &new_orientations, int iter) {
 
     assert(rod.parent != -1);
     const Rod &parent = this->rods.at(rod.parent);
@@ -414,68 +415,84 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     double wq = parent.weight();
     double wu = rod.weight();
 
-    Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
     Eigen::Quaterniond dq, du;
 
+    Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
     // dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
     // du.coeffs() = -wu / (wq + wu) * (q * darboux_diff).coeffs();
 
     // --------------------------------------------------------
-    Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
-    gradient_q(0,0) = -u.x();
-    gradient_q(1,0) = -u.y();
-    gradient_q(2,0) = -u.z();
-    gradient_q(0,1) = u.w();
-    gradient_q(1,2) = u.w();
-    gradient_q(2,3) = u.w();
-    gradient_q(0,2) = u.z();
-    gradient_q(0,3) = -u.y();
-    gradient_q(1,1) = -u.z();
-    gradient_q(1,3) = u.x();
-    gradient_q(2,1) = u.y();
-    gradient_q(2,2) = -u.x();
+    // Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
+    // gradient_q(0,0) = -u.x();
+    // gradient_q(1,0) = -u.y();
+    // gradient_q(2,0) = -u.z();
+    // gradient_q(0,1) = u.w();
+    // gradient_q(1,2) = u.w();
+    // gradient_q(2,3) = u.w();
+    // gradient_q(0,2) = u.z();
+    // gradient_q(0,3) = -u.y();
+    // gradient_q(1,1) = -u.z();
+    // gradient_q(1,3) = u.x();
+    // gradient_q(2,1) = u.y();
+    // gradient_q(2,2) = -u.x();
 
-    Eigen::MatrixXd gradient_u = Eigen::MatrixXd::Zero(3, 4);
-    gradient_u(0,0) = -q.x();
-    gradient_u(1,0) = -q.y();
-    gradient_u(2,0) = -q.z();
-    gradient_u(0,1) = q.w();
-    gradient_u(1,2) = q.w();
-    gradient_u(2,3) = q.w();
-    gradient_u(0,2) = q.z();
-    gradient_u(0,3) = -q.y();
-    gradient_u(1,1) = -q.z();
-    gradient_u(1,3) = q.x();
-    gradient_u(2,1) = q.y();
-    gradient_u(2,2) = -q.x();
-    gradient_u *= -1;
+    // Eigen::MatrixXd gradient_u = Eigen::MatrixXd::Zero(3, 4);
+    // gradient_u(0,0) = -q.x();
+    // gradient_u(1,0) = -q.y();
+    // gradient_u(2,0) = -q.z();
+    // gradient_u(0,1) = q.w();
+    // gradient_u(1,2) = q.w();
+    // gradient_u(2,3) = q.w();
+    // gradient_u(0,2) = q.z();
+    // gradient_u(0,3) = -q.y();
+    // gradient_u(1,1) = -q.z();
+    // gradient_u(1,3) = q.x();
+    // gradient_u(2,1) = q.y();
+    // gradient_u(2,2) = -q.x();
+    // gradient_u *= -1;
 
-    Vector4d prod_q = gradient_q.transpose() * (darboux - s * initial_darboux);
-    Quaterniond g_cst_st_q(prod_q(0),prod_q(1),prod_q(2),prod_q(3));
+    // Vector4d prod_q = gradient_q.transpose() * (darboux - s * initial_darboux);
+    // Quaterniond g_cst_st_q(prod_q(0),prod_q(1),prod_q(2),prod_q(3));
 
-    Vector4d prod_u = gradient_u.transpose() * (darboux - s * initial_darboux);
-    Quaterniond g_cst_st_u(prod_u(0),prod_u(1),prod_u(2),prod_u(3));
+    // Vector4d prod_u = gradient_u.transpose() * (darboux - s * initial_darboux);
+    // Quaterniond g_cst_st_u(prod_u(0),prod_u(1),prod_u(2),prod_u(3));
 
-    dq.coeffs() = wq / (wq + wu) * (g_cst_st_q).coeffs();
-    du.coeffs() = wu / (wq + wu) * (g_cst_st_u).coeffs();
+    // dq.coeffs() = wq / (wq + wu) * (g_cst_st_q).coeffs();
+    // du.coeffs() = wu / (wq + wu) * (g_cst_st_u).coeffs();
 
     // --------------------------------------------------------
-    // Vector3d twist_constraint_eval = darboux - s * initial_darboux;
-    // Vector3d c = twist_constraint_eval;
+    Vector3d twist_constraint_eval = darboux - s * initial_darboux;
+    Vector3d c = twist_constraint_eval;
 
-    // // Vector3d denominators(common_in_denom, common_in_denom, common_in_denom + 4 * wq * l * l);  //J = I1 + I2 = 2I1 in our case
-    // // Vector3d denominators(common_in_denom, common_in_denom, common_in_denom);  //J = I1 + I2 = 2I1 in our case
-    // Vector3d numerators = l * l * shear_constraint_eval + l * l * alpha_tilde * lambda_shear[i];
-    // // Vector3d delta_lambda = numerators.array() / denominators.array();
-    // Vector3d delta_lambda = numerators / common_in_denom;
-    // // update lambda
-    // lambda_shear[i] += delta_lambda;
+    // w := EI1 + EI2 + GJ
+    // denominators_pbd :=
+    //          (pho * l_q * I1_q + pho * l_u * I1_u,
+    //           pho * l_q * I2_q + pho * l_u * I2_u,
+    //           pho * l_q * J_q  + pho * l_u * J_u)
+    // alpha := (EI1, EI2, GJ)
+    // alpha_tilde = alpha / (dt * dt)
 
-    // Similar to shear, dc1/dq0 * d_lambda + dc2/dq0 * d_lambda + dc3/dq0 * d_lambda
-    // double w = quat_z.x() * delta_lambda.x() + quat_z.y() * delta_lambda.y() + quat_z.z() * delta_lambda.z();
-    // double x = quat_z.w() * delta_lambda.x() - quat_z.z() * delta_lambda.y() + quat_z.y() * delta_lambda.z();
-    // double y = quat_z.z() * delta_lambda.x() + quat_z.w() * delta_lambda.y() - quat_z.x() * delta_lambda.z();
-    // double z = -quat_z.y() * delta_lambda.x() + quat_z.x() * delta_lambda.y() + quat_z.w() * delta_lambda.z();
+    Vector3d alpha_tilde = Vector3d::Zero();
+    Vector3d denominator_pbd(wq + wu, wq + wu, wq + wu);
+    Vector3d denominator = denominator_pbd + alpha_tilde;
+    Vector3d numerator = twist_constraint_eval + alpha_tilde.cwiseProduct(lambda_twist[iter]);
+    Vector3d delta_lambda = numerator.cwiseQuotient(denominator);
+    // update lambda
+    lambda_twist[iter] += delta_lambda;
+    // Similar to shear, dc1/dq0 * d_lambda + dc2/dq0 * d_lambda + dc3/dq0 * d_lambda for q
+    double q_w = -u.x() * delta_lambda.x() -u.y() * delta_lambda.y() - u.z() * delta_lambda.z();
+    double q_x = u.w() * delta_lambda.x() - u.z() * delta_lambda.y() + u.y() * delta_lambda.z();
+    double q_y = u.z() * delta_lambda.x() + u.w() * delta_lambda.y() - u.x() * delta_lambda.z();
+    double q_z = -u.y() * delta_lambda.x() + u.x() * delta_lambda.y() + u.w() * delta_lambda.z();
+    Quaterniond quat_dq(q_w, q_x, q_y, q_z);
+    dq.coeffs() = wq * quat_dq.coeffs();
+    // Similar to dq, dc1/dq0 * d_lambda + dc2/dq0 * d_lambda + dc3/dq0 * d_lambda for q
+    double u_w = -q.x() * delta_lambda.x() -q.y() * delta_lambda.y() - q.z() * delta_lambda.z();
+    double u_x = q.w() * delta_lambda.x() - q.z() * delta_lambda.y() + q.y() * delta_lambda.z();
+    double u_y = q.z() * delta_lambda.x() + q.w() * delta_lambda.y() - q.x() * delta_lambda.z();
+    double u_z = -q.y() * delta_lambda.x() + q.x() * delta_lambda.y() + q.w() * delta_lambda.z();
+    Quaterniond quat_du(u_w, u_x, u_y, u_z);
+    du.coeffs() = -wu * quat_du.coeffs();
 
     return std::make_pair(dq, du);
 }

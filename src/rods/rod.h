@@ -105,9 +105,9 @@ private:
                              std::vector<Eigen::Quaterniond> &new_orientations);
     void project_stretch_shear_constraints(std::vector<Eigen::Vector3d> &new_positions,
                              std::vector<Eigen::Quaterniond> &new_orientations);
-    void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations) const;
+    void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations);
     std::pair<Eigen::Quaterniond, Eigen::Quaterniond> project_bend_twist_constraint(
             const Rod &rod,
-            const std::vector<Eigen::Quaterniond> &new_orientations) const;
+            const std::vector<Eigen::Quaterniond> &new_orientations, int iter);
 };
 
