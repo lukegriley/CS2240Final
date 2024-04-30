@@ -1,6 +1,7 @@
 #include "rod.h"
 
 #include <iostream>
+#include <stack>
 
 #include "rods/util.h"
 
@@ -82,16 +83,45 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
     }
 
     // Fix the rod's orientation at the root
-    this->rods[0].orientation.setFromTwoVectors(Vector3d{0, 0, 1}, this->rods[0].direction(*this));
-    for (int j = 1; j < m; ++j) {
-        // Initialize quaternions from position
-        // TODO: ensure that the parent is initialized.
-        Rod &rod = this->rods[j];
-        const Rod &parent = this->rods[rod.parent];
-        // Find the transformation nearest to the parent.
-        rod.orientation = Quaterniond::FromTwoVectors(parent.direction(*this), rod.direction(*this)) * parent.orientation;
-        rod.orientation.normalize();
-        rod.initial_orientation = rod.orientation;
+    std::vector<bool> visited(m, false);
+    std::vector<Quaterniond> orientations(m);
+    std::stack<int> to_visit;
+    for (const Rod &rod : this->rods) {
+        to_visit.push(rod.index);
+    }
+    while (to_visit.size() > 0) {
+        int next = to_visit.top();
+        if (visited[next]) {
+            to_visit.pop();
+            continue;
+        }
+        Rod &rod = this->rods[next];
+        int parent_index = rod.parent;
+
+        // Set root, if the rod has no parent
+        if (parent_index == -1) {
+            orientations[next].setFromTwoVectors(Vector3d{0, 0, 1}, rod.direction(*this));
+            to_visit.pop();
+            visited[next] = true;
+            continue;
+        }
+
+        // Visit parent first
+        if (!visited[parent_index]) {
+            to_visit.push(parent_index);
+            continue;
+        }
+
+        const Rod &parent = this->rods[parent_index];
+        // Initialize quaternion
+        orientations[next] = Quaterniond::FromTwoVectors(parent.direction(*this), rod.direction(*this)) * orientations[parent_index];
+        to_visit.pop();
+        visited[next] = true;
+    }
+    for (int j = 0; j < m; ++j) {
+        this->rods[j].orientation = orientations[j];
+        this->rods[j].orientation.normalize();
+        this->rods[j].initial_orientation = this->rods[j].orientation;
     }
 
     // Initialize angular velocity
@@ -380,7 +410,6 @@ void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientat
         // Note: the +1 and -1 are there to skip over the first fixed rod.
         // In the future, we would want to generalize this to trees.
         int rod_index = 1 + interleave(this->rods.size() - 1, j - 1);
-        rod_index = std::rand() % this->rods.size(); // whatever
         const Rod &rod = this->rods.at(rod_index);
         if (rod.parent == -1) {
             continue;
