@@ -43,6 +43,7 @@ void Tree::init_particles(std::vector<Vector3d> positions, std::vector<double> m
         particles[i].mass = mass[i];
         particles[i].fixed = false;
     }
+
 }
 
 void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<double> radii) {
@@ -50,6 +51,8 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
     using std::numbers::pi;
     int m = rods.size();
     this->rods.resize(m);
+    lambda_shear.resize(m);
+    lambda_twist.resize(m);
     // Compute particles and radius for each rod
     for (int j = 0; j < m; ++j) {
         Rod &rod = this->rods[j];
@@ -140,6 +143,12 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
 void Tree::iterate(double dt) {
     int n = this->particles.size();
     int m = this->rods.size();
+
+    // clear lambda for each iteration
+    for(int i = 0; i < m; i++){
+        lambda_shear[i] = Eigen::Vector3d::Zero();
+        lambda_twist[i] = Eigen::Vector3d::Zero();
+    }
 
     std::vector<Vector3d> new_velocities;
     this->iterate_predict_velocity(dt, new_velocities);
@@ -252,18 +261,19 @@ void Tree::generate_collision_constraints() {
 }
 
 void Tree::project_constraints(std::vector<Vector3d> &new_positions,
-                               std::vector<Quaterniond> &new_orientations) const {
+                               std::vector<Quaterniond> &new_orientations) {
     this->project_stretch_shear_constraints(new_positions, new_orientations);
     this->project_bend_twist_constraints(new_orientations);
 }
 
 void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_positions,
-                                             std::vector<Quaterniond> &new_orientations) const {
+                                             std::vector<Quaterniond> &new_orientations) {
     std::vector<Vector3d> dp(new_positions.size(), Vector3d::Zero());
     std::vector<Quaterniond> dq(new_orientations.size(), Quaterniond(0, 0, 0, 0));
 
     // Eigen::MatrixXd lambda = Eigen::MatrixXd::Zero(3, m);
     // Apply stretch-shear constraints
+    int i = 0;
     for (const Rod &rod : this->rods) {
         double w1 = this->particles[rod.particles[0]].weight();
         double w2 = this->particles[rod.particles[1]].weight();
@@ -273,16 +283,20 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
         double l = rod.initial_direction.norm();
         const Quaterniond &q = new_orientations[rod.index];
         Vector3d d = q * Vector3d(0, 0, 1);
-        Quaterniond conj_e3(0, 0, 0, -1);
 
-        double denominator = w1 + w2 + 4 * wq * l * l;
-        Vector3d diff = 1 / l * (p2 - p1) - d;
-        Quaterniond diffq = as_quaternion(diff);
-        dp[rod.particles[0]] += (w1 * l) / denominator * diff;
-        dp[rod.particles[1]] -= (w2 * l) / denominator * diff;
+        // Quaterniond conj_e3(0, 0, 0, -1);
+
+        // double denominator = w1 + w2 + 4 * wq * l * l;
+        // Vector3d diff = 1 / l * (p2 - p1) - d;
+        // Quaterniond diffq = as_quaternion(diff);
+
+        // dp[rod.particles[0]] += (w1 * l) / denominator * diff;
+        // dp[rod.particles[1]] -= (w2 * l) / denominator * diff;
         // dq[rod.index].coeffs() += (wq * l * l) / denominator * (diffq * q * conj_e3).coeffs();
-
-        Quaterniond correctq = diffq * q * conj_e3;
+        // --------------------------------------------------------------------------------------
+        Quaterniond e3(0, 0, 0, 1);
+        Quaterniond quat_z = e3 * q.conjugate();
+        // Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
         /*
          * for q = w + xi + yj + zk
          * S(v) =
@@ -294,35 +308,57 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
          *           -z, 0 , x
          *           y,  x , 0]
          */
-        Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
-        Quaterniond e3(0, 0, 0, 1);
-        Quaterniond quaternion_z = e3 * q.conjugate();
-        gradient_q(0,0) = quaternion_z.x();
-        gradient_q(1,0) = quaternion_z.y();
-        gradient_q(2,0) = quaternion_z.z();
+        // gradient_q(0,0) = quaternion_z.x();
+        // gradient_q(1,0) = quaternion_z.y();
+        // gradient_q(2,0) = quaternion_z.z();
+        // gradient_q(0,1) = quaternion_z.w();
+        // gradient_q(1,2) = quaternion_z.w();
+        // gradient_q(2,3) = quaternion_z.w();
+        // gradient_q(0,2) = quaternion_z.z();
+        // gradient_q(0,3) = -quaternion_z.y();
+        // gradient_q(1,1) = -quaternion_z.z();
+        // gradient_q(1,3) = quaternion_z.x();
+        // gradient_q(2,1) = quaternion_z.y();
+        // gradient_q(2,2) = -quaternion_z.x();
+        // gradient_q *= 2;
 
-        gradient_q(0,1) = quaternion_z.w();
-        gradient_q(1,2) = quaternion_z.w();
-        gradient_q(2,3) = quaternion_z.w();
+        // MatrixXd prod1 = gradient_q * gradient_q.transpose();
+        // Vector3d q_diag(prod1(0,0), prod1(1,1), prod1(2,2));
+        // // double denominator = w1 + w2 + 4 * wq * l * l;  //denominator shoud be vec3, wq(2) is different from wq(0) and wq(1)
+        // Vector4d prod2 = gradient_q.transpose() * diff;
+        // Quaterniond g_cst_st(prod2(0), prod2(1), prod2(2), prod2(3));
+        // Quaterniond g_cst_st(w, x, y, z);
+        // dq[rod.index].coeffs() += (wq * l * l) / denominator * g_cst_st.coeffs();
 
-        gradient_q(0,2) = quaternion_z.z();
-        gradient_q(0,3) = -quaternion_z.y();
-        gradient_q(1,1) = -quaternion_z.z();
+        // ------------------------------------------------------------------------------------------------------
+        //alpha_tilde = alpha_inverse / (t^2); the paper suggests alpha_inverse [1e-8, 1e-10], our delta_t = 1e-3
+        const double alpha_tilde = 0.01;
 
-        gradient_q(1,3) = quaternion_z.x();
-        gradient_q(2,1) = quaternion_z.y();
-        gradient_q(2,2) = -quaternion_z.x();
+        // Vector3d intertias(wq, wq, 2*wq);
+        Vector3d shear_constraint_eval = 1 / l * (p2 - p1) - d;
 
-        gradient_q *= 2;
-
-        MatrixXd prod1 = gradient_q * gradient_q.transpose();
-        Vector3d q_diag(prod1(0,0), prod1(1,1), prod1(2,2));
-        // double denominator = w1 + w2 + 4 * wq * l * l;  //denominator shoud be vec3, wq(2) is different from wq(0) and wq(1)
-        Vector4d prod2 = gradient_q.transpose() * diff;
-        Quaterniond g_cst_st(prod2(0), prod2(1), prod2(2), prod2(3));
-
-        dq[rod.index].coeffs() += (wq * l * l) / denominator * g_cst_st.coeffs();
-
+        double common_in_denom = w1 + w2 + alpha_tilde * l * l + 4 * wq * l * l;
+        // Vector3d denominators(common_in_denom, common_in_denom, common_in_denom + 4 * wq * l * l);  //J = I1 + I2 = 2I1 in our case
+        // Vector3d denominators(common_in_denom, common_in_denom, common_in_denom);  //J = I1 + I2 = 2I1 in our case
+        Vector3d numerators = l * l * shear_constraint_eval + l * l * alpha_tilde * lambda_shear[i];
+        // Vector3d delta_lambda = numerators.array() / denominators.array();
+        Vector3d delta_lambda = numerators / common_in_denom;
+        // update lambda
+        lambda_shear[i] += delta_lambda;
+        // update orientation
+        // dc1/dq0 * d_lambda + dc2/dq0 * d_lambda + dc3/dq0 * d_lambda
+        double w = quat_z.x() * delta_lambda.x() + quat_z.y() * delta_lambda.y() + quat_z.z() * delta_lambda.z();
+        double x = quat_z.w() * delta_lambda.x() - quat_z.z() * delta_lambda.y() + quat_z.y() * delta_lambda.z();
+        double y = quat_z.z() * delta_lambda.x() + quat_z.w() * delta_lambda.y() - quat_z.x() * delta_lambda.z();
+        double z = -quat_z.y() * delta_lambda.x() + quat_z.x() * delta_lambda.y() + quat_z.w() * delta_lambda.z();
+        // Quaterniond quat_dq(wq * w, wq * x, wq * y, wq * z);
+        // dq[rod.index].coeffs() += quat_dq.coeffs();
+        Quaterniond quat_dq(w, x, y, z);
+        dq[rod.index].coeffs() += wq * 2 * quat_dq.coeffs();
+        // // update position
+        dp[rod.particles[0]] += w1 / l * delta_lambda;
+        dp[rod.particles[1]] -= w2 / l * delta_lambda;
+        i++;
     }
 
     for (int i = 0; i < this->particles.size(); ++i) {
@@ -378,6 +414,13 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     double wq = parent.weight();
     double wu = rod.weight();
 
+    Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
+    Eigen::Quaterniond dq, du;
+
+    // dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
+    // du.coeffs() = -wu / (wq + wu) * (q * darboux_diff).coeffs();
+
+    // --------------------------------------------------------
     Eigen::MatrixXd gradient_q = Eigen::MatrixXd::Zero(3, 4);
     gradient_q(0,0) = -u.x();
     gradient_q(1,0) = -u.y();
@@ -413,12 +456,26 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     Vector4d prod_u = gradient_u.transpose() * (darboux - s * initial_darboux);
     Quaterniond g_cst_st_u(prod_u(0),prod_u(1),prod_u(2),prod_u(3));
 
-    // Quaterniond darboux_diff = as_quaternion(darboux - s * initial_darboux);
-    Eigen::Quaterniond dq, du;
-    // dq.coeffs() = wq / (wq + wu) * (u * darboux_diff).coeffs();
-    // du.coeffs() = -wu / (wq + wu) * (q * darboux_diff).coeffs();
     dq.coeffs() = wq / (wq + wu) * (g_cst_st_q).coeffs();
     du.coeffs() = wu / (wq + wu) * (g_cst_st_u).coeffs();
+
+    // --------------------------------------------------------
+    // Vector3d twist_constraint_eval = darboux - s * initial_darboux;
+    // Vector3d c = twist_constraint_eval;
+
+    // // Vector3d denominators(common_in_denom, common_in_denom, common_in_denom + 4 * wq * l * l);  //J = I1 + I2 = 2I1 in our case
+    // // Vector3d denominators(common_in_denom, common_in_denom, common_in_denom);  //J = I1 + I2 = 2I1 in our case
+    // Vector3d numerators = l * l * shear_constraint_eval + l * l * alpha_tilde * lambda_shear[i];
+    // // Vector3d delta_lambda = numerators.array() / denominators.array();
+    // Vector3d delta_lambda = numerators / common_in_denom;
+    // // update lambda
+    // lambda_shear[i] += delta_lambda;
+
+    // Similar to shear, dc1/dq0 * d_lambda + dc2/dq0 * d_lambda + dc3/dq0 * d_lambda
+    // double w = quat_z.x() * delta_lambda.x() + quat_z.y() * delta_lambda.y() + quat_z.z() * delta_lambda.z();
+    // double x = quat_z.w() * delta_lambda.x() - quat_z.z() * delta_lambda.y() + quat_z.y() * delta_lambda.z();
+    // double y = quat_z.z() * delta_lambda.x() + quat_z.w() * delta_lambda.y() - quat_z.x() * delta_lambda.z();
+    // double z = -quat_z.y() * delta_lambda.x() + quat_z.x() * delta_lambda.y() + quat_z.w() * delta_lambda.z();
 
     return std::make_pair(dq, du);
 }

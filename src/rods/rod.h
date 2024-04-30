@@ -61,7 +61,8 @@ struct Rod {
 struct Tree {
     std::vector<Particle> particles;
     std::vector<Rod> rods;
-
+    std::vector<Eigen::Vector3d> lambda_shear;
+    std::vector<Eigen::Vector3d> lambda_twist;
     void init_particles(std::vector<Eigen::Vector3d> positions, std::vector<double> mass);
     void init_orientations(std::vector<std::pair<int, int>> rods, std::vector<double> radii);
     void iterate(double dt);
@@ -101,9 +102,9 @@ private:
 
     void generate_collision_constraints();
     void project_constraints(std::vector<Eigen::Vector3d> &new_positions,
-                             std::vector<Eigen::Quaterniond> &new_orientations) const;
+                             std::vector<Eigen::Quaterniond> &new_orientations);
     void project_stretch_shear_constraints(std::vector<Eigen::Vector3d> &new_positions,
-                             std::vector<Eigen::Quaterniond> &new_orientations) const;
+                             std::vector<Eigen::Quaterniond> &new_orientations);
     void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations) const;
     std::pair<Eigen::Quaterniond, Eigen::Quaterniond> project_bend_twist_constraint(
             const Rod &rod,
