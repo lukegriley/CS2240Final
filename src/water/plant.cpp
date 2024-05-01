@@ -12,6 +12,7 @@ double Segment::height() const {
 
 Segment createSegment(const plant::Plant &plant, const plant::Vertex &vertex) {
     return Segment {
+        .index = vertex.index,
         .head_position = vertex.parent == -1 ? Vector3d::Zero() : plant.vertices[vertex.parent].tail_position,
         .tail_position = vertex.tail_position,
         .radius = vertex.radius,
@@ -117,10 +118,14 @@ void Plant::initDiffusion() {
 void Plant::updateDiffusionDelta(float dt)
 {
     // sparse solver
-    SparseMatrix<double> identity(segments.size(), segments.size());
-    identity.setIdentity();
-    double dt2 = 1e-25;
-    SimplicialLLT<SparseMatrix<double>> solver(identity - m_alpha * dt2 * m_S_sparse);
+    SparseMatrix<double> L(segments.size(), segments.size());
+    L.setIdentity();
+    L -= m_alpha * dt * m_S_sparse;
+    L.makeCompressed();
+    SparseLU<SparseMatrix<double>> solver;
+    solver.isSymmetric(true);
+    solver.analyzePattern(L);
+    solver.factorize(L);
 
     // b vector calculation
     VectorXd b = m_omega * m_beta;

@@ -25,32 +25,6 @@ void Simulation::init()
     double density = 7800;
     tree.init_from_plant(plant, density);
 
-//    std::vector<Vector3d> positions;
-//    std::vector<double> masses;
-//    std::vector<std::pair<int, int>> rods;
-//    std::vector<double> radii;
-//    Vector3d root { 0.1, 0, 0.2 };
-//    double mass = 1e-6;
-
-//    positions.push_back(root);
-//    masses.push_back(mass);
-//    int n = 100;
-//    for (int i = 1; i < n; ++i) {
-//        double angle = 0.4 * i;
-//        positions.push_back(root + 0.05 * Vector3d {std::cos(angle) - 1, std::sin(angle), -0.05 * angle});
-//        masses.push_back(mass);
-//        rods.push_back(std::make_pair(i - 1, i));
-//        radii.push_back(0.001);
-//    }
-//    // masses[masses.size() - 1] = mass * 1000;
-//    tree.init_particles(positions, masses);
-//    tree.init_orientations(rods, radii);
-
-//    // Fix a rod
-//    tree.rods[0].fixed = true;
-//    tree.particles[0].fixed = true;
-//    tree.particles[1].fixed = true;
-
     tree.gravity = Vector3d {0, 0, -1};
     renderer.init(tree);
 
@@ -69,6 +43,7 @@ void Simulation::update(double seconds)
 
 void Simulation::draw(Shader *shader)
 {
+    this->m_plantRenderer.render(shader);
     renderer.render(shader);
     m_ground.draw(shader);
 }

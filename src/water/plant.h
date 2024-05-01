@@ -9,7 +9,7 @@
 
 namespace water {
 
-static float DYNAMIC_VISCOSITY = 1.f;
+static float DYNAMIC_VISCOSITY = 9e-7;
 
 struct Segment {
     int index;

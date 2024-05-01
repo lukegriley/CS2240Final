@@ -60,7 +60,7 @@ void GLWidget::initializeGL()
     glCullFace(GL_BACK);
 
     // Initialize the shader and simulation
-    m_shader = new Shader(":/resources/shaders/shader.vert", ":/resources/shaders/shader.frag");
+    m_shader = new Shader(":/resources/shaders/shader.vert", "./resources/shaders/plant.frag");
     m_sim.init();
 
     // Initialize camera with a reasonable transform
@@ -173,7 +173,7 @@ void GLWidget::tick()
     if (m_frames != 0) {
         const double STEP_SIZE = 0.001;
         // deltaSeconds explodes if the calculation is slow, so we fix dt.
-        const double dt = 0.05;
+        const double dt = 0.01;
         // Take steps of fixed size
         double curr = 0;
         while (curr < dt) {
