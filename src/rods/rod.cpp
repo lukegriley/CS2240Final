@@ -20,19 +20,8 @@ Vector3d Rod::direction(const Tree &tree) const  {
     return tree.particles[particles[1]].position - tree.particles[particles[0]].position;
 }
 
-Vector3d calulate_darboux(const Quaterniond &q1, const Quaterniond &q2) {
+Vector3d calculate_darboux(const Quaterniond &q1, const Quaterniond &q2) {
     return (q1.conjugate() * q2).vec();
-}
-
-Vector3d Rod::calculate_initial_darboux(const Tree &tree) const {
-    if (this->parent == -1) {
-        throw std::runtime_error("no parent");
-    }
-    const Rod &parent = tree.rods[this->parent];
-
-    const Quaterniond &parent_orientation = parent.initial_orientation;
-    const Quaterniond &this_orientation = this->initial_orientation;
-    return calulate_darboux(parent_orientation, this_orientation);
 }
 
 void Tree::init_particles(std::vector<Vector3d> positions, std::vector<double> mass) {
@@ -159,8 +148,10 @@ void Tree::init_orientations(std::vector<std::pair<int, int>> rods, std::vector<
 
     // For each particle, compute the Darboux vector.
     for (Rod &rod : this->rods) {
-        if (rod.parent != -1)
-            rod.initial_darboux = rod.calculate_initial_darboux(*this);
+        if (rod.parent != -1) {
+            const Rod &parent = this->rods[rod.parent];
+            rod.initial_darboux = calculate_darboux(parent.orientation, rod.orientation);
+        }
     }
 }
 
@@ -479,7 +470,7 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     assert(rod.parent != -1);
     const Rod &parent = this->rods.at(rod.parent);
 
-    Vector3d darboux = calulate_darboux(q, u);
+    Vector3d darboux = calculate_darboux(q, u);
     Vector3d initial_darboux = rod.initial_darboux;
     // We suppose q is the parent, u is this rod
     double s = (darboux.dot(initial_darboux) > 0) ? 1 : -1;

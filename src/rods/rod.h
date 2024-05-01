@@ -32,7 +32,6 @@ struct Rod {
     inline double weight() const { return 1.0 / inertia_s; }
 
     Eigen::Vector3d initial_darboux;
-    Eigen::Vector3d calculate_initial_darboux(const Tree &tree) const;
 
     bool fixed = false;
     int parent = -1;
