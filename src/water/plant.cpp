@@ -111,8 +111,6 @@ void Plant::initDiffusion() {
 
     // cache matrix for fast computation
     // SparseMatrix<double> m_S_sparse = S.sparseView(); m_S_sparse.makeCompressed();
-
-
 }
 
 void Plant::updateDiffusionDelta(float dt)
@@ -123,7 +121,6 @@ void Plant::updateDiffusionDelta(float dt)
     L -= m_alpha * dt * m_S_sparse;
     L.makeCompressed();
     SparseLU<SparseMatrix<double>> solver;
-    solver.isSymmetric(true);
     solver.analyzePattern(L);
     solver.factorize(L);
 

@@ -26,6 +26,8 @@ struct Rod {
     Eigen::Quaterniond initial_orientation;
     Eigen::Quaterniond orientation;
     Eigen::Vector3d angular_velocity;
+
+    void set_mass(double mass);
     Eigen::Matrix3d inertia;
     Eigen::Matrix3d inverse_inertia;
     double inertia_s;
@@ -38,6 +40,11 @@ struct Rod {
     int particles[2];
 
     Eigen::Vector3d direction(const Tree &tree) const;
+
+    Eigen::DiagonalMatrix<double, 3> compliance {0, 0, 0}; // alpha
+    void set_material_parameters(double youngs_modulus, double torsion_modulus);
+private:
+    double mass;
 };
 
 struct Tree {
@@ -50,7 +57,7 @@ struct Tree {
     void init_from_plant(const plant::Plant &plant, double density);
     void iterate(double dt);
 
-    int num_bend_twist_steps = 20;
+    int num_bend_twist_steps = 1;
     Eigen::Vector3d gravity {0, 0, 0};
 
 private:
@@ -82,13 +89,16 @@ private:
 
     void generate_collision_constraints();
     void project_constraints(std::vector<Eigen::Vector3d> &new_positions,
-                             std::vector<Eigen::Quaterniond> &new_orientations);
+                             std::vector<Eigen::Quaterniond> &new_orientations,
+                             double dt);
     void project_stretch_shear_constraints(std::vector<Eigen::Vector3d> &new_positions,
                              std::vector<Eigen::Quaterniond> &new_orientations);
-    void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations);
+    void project_bend_twist_constraints(std::vector<Eigen::Quaterniond> &new_orientations,
+                                        double dt);
     std::pair<Eigen::Quaterniond, Eigen::Quaterniond> project_bend_twist_constraint(
             const Rod &rod,
             const Eigen::Quaterniond &q, const Eigen::Quaterniond &u,
+            double dt,
             int iter);
 };
 

@@ -20,6 +20,18 @@ Vector3d Rod::direction(const Tree &tree) const  {
     return tree.particles[particles[1]].position - tree.particles[particles[0]].position;
 }
 
+void Rod::set_material_parameters(double youngs_modulus, double torsion_modulus) {
+    double radius4 = this->radius * this->radius * this->radius * this->radius;
+    double area_inertia = 0.25 * std::numbers::pi * radius4;
+
+    DiagonalMatrix<double, 3> material = {
+        area_inertia * youngs_modulus,
+        area_inertia * youngs_modulus,
+        2 * area_inertia * torsion_modulus
+    };
+    this->compliance = material.inverse();
+}
+
 Vector3d calculate_darboux(const Quaterniond &q1, const Quaterniond &q2) {
     return (q1.conjugate() * q2).vec();
 }
@@ -223,9 +235,9 @@ void Tree::iterate(double dt) {
     std::vector<Quaterniond> fixed_orientations = new_orientations;
 
     // this->generate_collision_constraints(new_positions);
-    int iterations = 10;
+    int iterations = 100;
     for (int iter = 0; iter < iterations; ++iter) {
-        this->project_constraints(new_positions, new_orientations);
+        this->project_constraints(new_positions, new_orientations, dt);
     }
 
     // Update particles
@@ -321,9 +333,10 @@ void Tree::generate_collision_constraints() {
 }
 
 void Tree::project_constraints(std::vector<Vector3d> &new_positions,
-                               std::vector<Quaterniond> &new_orientations) {
+                               std::vector<Quaterniond> &new_orientations,
+                               double dt) {
     this->project_stretch_shear_constraints(new_positions, new_orientations);
-    this->project_bend_twist_constraints(new_orientations);
+    this->project_bend_twist_constraints(new_orientations, dt);
 }
 
 void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_positions,
@@ -425,17 +438,16 @@ void Tree::project_stretch_shear_constraints(std::vector<Vector3d> &new_position
 }
 
 
-void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientations) {
+void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientations,
+                                          double dt) {
     // Apply bend-twist constraints
     // Do this over multiple iterations for stability
     // We apply these in an interleaving order.
-    int intr = 0;
-
     for (int j = 0; j < this->rods.size(); ++j) {
         // Note: the +1 and -1 are there to skip over the first fixed rod.
         // In the future, we would want to generalize this to trees.
         int rod_index = interleave(this->rods.size(), j);
-        rod_index = std::rand() % this->rods.size();
+        // rod_index = std::rand() % this->rods.size();
         const Rod &rod = this->rods.at(rod_index);
         if (rod.parent == -1) {
             continue;
@@ -446,13 +458,12 @@ void Tree::project_bend_twist_constraints(std::vector<Quaterniond> &new_orientat
         int num_steps = num_bend_twist_steps;
         for (int i = 0; i < num_steps; ++i) {
             Quaterniond dq, du;
-            std::tie(dq, du) = this->project_bend_twist_constraint(rod, q, u, intr);
+            std::tie(dq, du) = this->project_bend_twist_constraint(rod, q, u, dt, rod.index);
 
             q = (q.coeffs() + 1.0 / num_steps * dq.coeffs()).normalized();
             u = (u.coeffs() + 1.0 / num_steps * du.coeffs()).normalized();
 
         }
-        intr++;
 
         new_orientations[rod.parent] = q;
         new_orientations[rod.index] = u;
@@ -465,6 +476,7 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
         const Rod &rod,
         const Quaterniond &q,
         const Quaterniond &u,
+        double dt,
         int iter) {
 
     assert(rod.parent != -1);
@@ -532,13 +544,13 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     // alpha := (EI1, EI2, GJ)
     // alpha_tilde = alpha / (dt * dt)
 
-    Vector3d alpha_tilde = Vector3d::Zero();
+    Vector3d alpha_tilde = rod.compliance.diagonal() / (dt * dt);
     Vector3d denominator_pbd(wq + wu, wq + wu, wq + wu);
     Vector3d denominator = denominator_pbd + alpha_tilde;
-    Vector3d numerator = twist_constraint_eval + alpha_tilde.cwiseProduct(lambda_twist[iter]);
+    Vector3d numerator = twist_constraint_eval - alpha_tilde.cwiseProduct(lambda_twist[rod.index]);
     Vector3d delta_lambda = numerator.cwiseQuotient(denominator);
     // update lambda
-    lambda_twist[iter] += delta_lambda;
+    lambda_twist[rod.index] += delta_lambda;
     // Similar to shear, dc1/dq0 * d_lambda + dc2/dq0 * d_lambda + dc3/dq0 * d_lambda for q
     double q_w = -u.x() * delta_lambda.x() -u.y() * delta_lambda.y() - u.z() * delta_lambda.z();
     double q_x = u.w() * delta_lambda.x() - u.z() * delta_lambda.y() + u.y() * delta_lambda.z();
@@ -554,6 +566,8 @@ std::pair<Quaterniond, Quaterniond> Tree::project_bend_twist_constraint(
     Quaterniond quat_du(u_w, u_x, u_y, u_z);
     du.coeffs() = -wu * quat_du.coeffs();
 
+    assert(dq.coeffs().allFinite());
+    assert(dq.coeffs().allFinite());
     return std::make_pair(dq, du);
 }
 

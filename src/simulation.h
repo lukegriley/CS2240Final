@@ -19,6 +19,9 @@ public:
     void draw(Shader *shader);
 
     void toggleWire();
+
+    double elastic_threshold = 3e-8;
+    double elastic_steepness = 1e8;
 private:
     Shape m_shape;
     water::Plant m_plant;
