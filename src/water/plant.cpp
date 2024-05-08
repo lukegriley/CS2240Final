@@ -68,7 +68,7 @@ void Plant::initDiffusion() {
     //compute pressure and resistance at each node
     cout << "Computing pressure and resistance at each node" <<endl;
     for(Segment &v : this->segments) {
-        v.resistance = (M_PI * std::pow(v.radius,4))/(8.f*DYNAMIC_VISCOSITY*v.height());
+        v.resistance = (M_PI * std::pow(v.radius,4))/(8.f*this->dynamic_viscosity*v.height());
     }
 
     //compute resistance at each segment (averaged between end nodes)
@@ -116,13 +116,15 @@ void Plant::initDiffusion() {
 void Plant::updateDiffusionDelta(float dt)
 {
     // sparse solver
-    SparseMatrix<double> L(segments.size(), segments.size());
-    L.setIdentity();
-    L -= m_alpha * dt * m_S_sparse;
-    L.makeCompressed();
-    SparseLU<SparseMatrix<double>> solver;
-    solver.analyzePattern(L);
-    solver.factorize(L);
+    if (last_dt != dt) {
+        SparseMatrix<double> L(segments.size(), segments.size());
+        L.setIdentity();
+        L -= m_alpha * dt * m_S_sparse;
+        L.makeCompressed();
+        this->solver.analyzePattern(L);
+        this->solver.factorize(L);
+        last_dt = dt;
+    }
 
     // b vector calculation
     VectorXd b = m_omega * m_beta;

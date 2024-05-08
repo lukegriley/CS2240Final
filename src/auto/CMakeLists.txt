@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Specifies .cpp and .h files to be passed to the compiler
 add_executable(run-simulation
     config.cpp
+    export.cpp
     main.cpp
     simulation.cpp
 )

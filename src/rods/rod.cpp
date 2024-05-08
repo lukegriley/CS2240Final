@@ -3,18 +3,14 @@
 #include <iostream>
 #include <stack>
 
-#include <plant/plant.h>
-#include "rods/util.h"
 #include <omp.h>
+#include <plant/plant.h>
+
+#include "rodutils.h"
 
 using namespace Eigen;
 
 namespace rod {
-
-// Use the given vector in quaternion math.
-Quaterniond as_quaternion(const Vector3d &vec) {
-    return Quaterniond(0, vec[0], vec[1], vec[2]);
-}
 
 Vector3d Rod::direction(const Tree &tree) const  {
     return tree.particles[particles[1]].position - tree.particles[particles[0]].position;
@@ -235,8 +231,7 @@ void Tree::iterate(double dt) {
     std::vector<Quaterniond> fixed_orientations = new_orientations;
 
     // this->generate_collision_constraints(new_positions);
-    int iterations = 100;
-    for (int iter = 0; iter < iterations; ++iter) {
+    for (int iter = 0; iter < this->num_iterations; ++iter) {
         this->project_constraints(new_positions, new_orientations, dt);
     }
 

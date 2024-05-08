@@ -1,7 +1,9 @@
 
 add_library(stiffrod
     STATIC
-    rod.cpp)
+    direct.cpp
+    rod.cpp
+    rodutils.cpp)
 
 target_include_directories(stiffrod
     PRIVATE

@@ -7,6 +7,7 @@
 #include <QStringList>
 
 #include "config.h"
+#include "simulation.h"
 
 int main(int argc, char *argv[]) {
 
@@ -45,7 +46,8 @@ int main(int argc, char *argv[]) {
     Config config;
     config.init(settings);
 
-    std::cout << "hi" << std::endl;
+    Simulation simulation(config);
+    simulation.run();
 
     return 0;
 }

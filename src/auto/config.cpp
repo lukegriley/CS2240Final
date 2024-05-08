@@ -62,15 +62,19 @@ void Config::init(const QSettings &settings) {
     this->simulation.frames = get_setting<int>(settings, "Simulation/frames");
 
     this->water.dynamic_viscosity = get_setting<double>(settings, "Water/dynamicViscosity");
-    this->water.elastic_steepness = get_setting<double>(settings, "Water/elasticSteepness");
-    this->water.elastic_threshold = get_setting<double>(settings, "Water/elasticThreshold");
+    this->water.uniform_loss_rate = get_setting<double>(settings, "Water/uniformLossRate");
     this->water.time_between_frames = get_setting<double>(settings, "Water/timeBetweenFrames");
     this->water.integration_time_step = get_setting<double>(settings, "Water/integrationTimeStep");
+    this->water.elastic_steepness = get_setting<double>(settings, "Water/elasticSteepness");
+    this->water.elastic_threshold = get_setting<double>(settings, "Water/elasticThreshold");
 
     this->rods.density = get_setting<double>(settings, "Rods/density");
     this->rods.gravity = get_setting<double>(settings, "Rods/gravity");
     this->rods.iterations_per_frame = get_setting<int>(settings, "Rods/iterationsPerFrame");
     this->rods.iteration_time_step = get_setting<double>(settings, "Rods/iterationTimeStep");
     this->rods.num_constraint_iterations = get_setting<int>(settings, "Rods/numConstraintIterations");
+
+    this->rods.min_youngs_modulus = get_setting<double>(settings, "Rods/minYoungsModulus");
+    this->rods.max_youngs_modulus = get_setting<double>(settings, "Rods/maxYoungsModulus");
     this->rods.torsion_modulus = get_setting<double>(settings, "Rods/torsionModulus");
 }

@@ -8,14 +8,6 @@ using namespace Eigen;
 
 namespace water {
 
-Plant Loader::load_plant(const std::string &plant_path) {
-    plant::Plant basic_plant = plant::load(plant_path);
-    Plant plant;
-    plant.initStructure(basic_plant);
-    plant.initDiffusion();
-	return plant;
-}
-
 void Loader::load_S_decomp(const std::string &plant_path, Plant &plant){
     std::ifstream plant_istream(plant_path);
     if (!plant_istream.good()) {

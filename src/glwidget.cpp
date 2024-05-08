@@ -171,7 +171,7 @@ void GLWidget::tick()
     const double deltaSeconds = m_deltaTimeProvider.restart() * 0.001;
 
     if (m_frames != 0) {
-        const double STEP_SIZE = 0.001;
+        const double STEP_SIZE = 0.01;
         // deltaSeconds explodes if the calculation is slow, so we fix dt.
         const double dt = 0.01;
         // Take steps of fixed size

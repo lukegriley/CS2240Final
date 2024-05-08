@@ -9,8 +9,6 @@
 
 namespace water {
 
-static float DYNAMIC_VISCOSITY = 9e-7;
-
 struct Segment {
     int index;
 
@@ -41,8 +39,8 @@ struct Plant {
     Eigen::DiagonalMatrix<float, Eigen::Dynamic> lambda;
 
     float delta = 3e-4; //uniform loss rate of plant
+    double dynamic_viscosity = 9e-7;
 
-    Plant() = default;
     void initStructure(const plant::Plant &basic_plant);
     void initDiffusion();
     void updateDiffusionDelta(const float dt); // delta time diffusion update
@@ -51,6 +49,8 @@ struct Plant {
     double m_alpha;
     Eigen::VectorXd m_beta;
     Eigen::SparseMatrix<double> m_S_sparse;
+    Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+    double last_dt;
 };
 
 

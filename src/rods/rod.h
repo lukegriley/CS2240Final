@@ -58,6 +58,7 @@ struct Tree {
     void iterate(double dt);
 
     int num_bend_twist_steps = 1;
+    int num_iterations = 100;
     Eigen::Vector3d gravity {0, 0, 0};
 
 private:

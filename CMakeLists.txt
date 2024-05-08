@@ -45,6 +45,7 @@ add_executable(${PROJECT_NAME}
     src/graphics/shape.cpp
     src/render/line.cpp
     src/render/cylinder.cpp
+    src/render/directrod.cpp
     src/render/rod.cpp
 
     src/mainwindow.h

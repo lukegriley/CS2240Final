@@ -14,10 +14,13 @@ struct SimulationConfig {
 
 struct WaterConfig {
     double dynamic_viscosity;
-    double elastic_steepness;
-    double elastic_threshold;
+    double uniform_loss_rate;
+
     double time_between_frames;
     double integration_time_step;
+
+    double elastic_steepness;
+    double elastic_threshold;
 };
 
 struct RodsConfig {
@@ -26,6 +29,9 @@ struct RodsConfig {
     int iterations_per_frame;
     double iteration_time_step;
     int num_constraint_iterations;
+
+    double min_youngs_modulus;
+    double max_youngs_modulus;
     double torsion_modulus;
 };
 

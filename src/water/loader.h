@@ -44,7 +44,6 @@ public:
     private:
         int c;
     };
-    static Plant load_plant(const std::string &plant_path);
     static void load_S_decomp(const std::string &plant_path, Plant &plant);
 };
 
