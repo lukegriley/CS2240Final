@@ -14,4 +14,6 @@ struct Simulation {
 
     Simulation(const Config &config);
     void run();
+    void export_water(int frame);
+    void export_physics(int frame);
 };

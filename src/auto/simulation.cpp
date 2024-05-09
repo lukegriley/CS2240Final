@@ -43,13 +43,18 @@ void Simulation::run() {
     // Make output directory
     std::error_code ec;
     std::filesystem::path output_directory(this->config.io.output_directory);
-    std::filesystem::create_directories(output_directory, ec);
+    std::filesystem::create_directories(output_directory / "physics", ec);
+    std::filesystem::create_directories(output_directory / "water", ec);
     if (ec) {
         throw std::runtime_error("error creating output directory: " + ec.message());
     }
 
+    // Export frame 0
+    // this->export_water(0);
+    this->export_physics(0);
 
-    for (int frame = 0; frame < config.simulation.frames; ++frame) {
+
+    for (int frame = 1; frame < config.simulation.frames; ++frame) {
         std::cout << "Running frame " << frame << std::endl;
         // Run the water simulation for some time
         for (double waterTime = 0;
@@ -57,7 +62,8 @@ void Simulation::run() {
              waterTime += config.water.integration_time_step) {
             this->water_plant.updateDiffusionDelta(config.water.integration_time_step);
         }
-        std::cout << "Finished water" << std::endl;
+
+        // TODO: export water
 
         // Update the physics simulation
         for (int j = 0; j < this->water_plant.segments.size(); ++j) {
@@ -70,26 +76,45 @@ void Simulation::run() {
             double torsion_modulus = this->config.rods.torsion_modulus;
             rod.set_material_parameters(youngs_modulus, torsion_modulus);
         }
-        std::cout << "Updated parameters" << std::endl;
 
         // Run the physics simulation for some time
         for (int iteration = 0; iteration < this->config.rods.iterations_per_frame; ++iteration) {
             this->rod_tree.iterate(this->config.rods.iteration_time_step);
         }
-        std::cout << "Finished physics" << std::endl;
 
         // Export the data
-        std::cout << "Done with frame" << std::endl;
-
-        std::filesystem::path out_path(this->config.io.output_directory);
-        out_path /= filename(frame, 5);
-        std::cout << "Writing to " << out_path << std::endl;
-        std::ofstream out(out_path);
-        if (!out.good()) {
-            std::ostringstream msg;
-            msg << "failed to open " << out_path << " for writing";
-            throw std::runtime_error(msg.str());
-        }
-        out << this->rod_tree;
+        this->export_physics(frame);
     }
+}
+
+
+void Simulation::export_water(int frame) {
+    std::filesystem::path out_path(this->config.io.output_directory);
+    out_path /= "water";
+    out_path /= filename(frame, 5);
+    std::cout << "Writing to " << out_path << std::endl;
+    std::ofstream out(out_path);
+    if (!out.good()) {
+        std::ostringstream msg;
+        msg << "failed to open " << out_path << " for writing";
+        throw std::runtime_error(msg.str());
+    }
+
+    throw std::runtime_error("unimplemented");
+    out << this->rod_tree;
+
+}
+
+void Simulation::export_physics(int frame) {
+    std::filesystem::path out_path(this->config.io.output_directory);
+    out_path /= "physics";
+    out_path /= filename(frame, 5);
+    std::cout << "Writing to " << out_path << std::endl;
+    std::ofstream out(out_path);
+    if (!out.good()) {
+        std::ostringstream msg;
+        msg << "failed to open " << out_path << " for writing";
+        throw std::runtime_error(msg.str());
+    }
+    out << this->rod_tree;
 }

@@ -21,7 +21,7 @@ private:
     std::vector<Eigen::Affine3d> transformations;
     std::vector<Eigen::Vector3f> colors;
     Shape m_cylinder;
-    float uniform_scale = 10.f;
+    float uniform_scale = 10.0f;
 };
 
 

@@ -14,7 +14,7 @@ Simulation::Simulation() {}
 void Simulation::init()
 {
 
-    std::string plant_file = "./data/plants/plant000.txt";
+    std::string plant_file = "./exported-plant.txt";
     plant::Plant plant = plant::load(plant_file);
 
     // Initialize plant and renderer

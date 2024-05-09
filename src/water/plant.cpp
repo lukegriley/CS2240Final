@@ -111,6 +111,20 @@ void Plant::initDiffusion() {
 
     // cache matrix for fast computation
     // SparseMatrix<double> m_S_sparse = S.sparseView(); m_S_sparse.makeCompressed();
+
+    // Print minimum and maximum water amounts
+    double min_amount = 1e30;
+    double max_amount = -1;
+    double mean_amount = -1;
+    for (const Segment &v : segments) {
+        min_amount = std::min(v.water_amt, min_amount);
+        max_amount = std::max(v.water_amt, max_amount);
+        mean_amount = mean_amount * v.index / (v.index + 1) +
+                v.water_amt / (v.index + 1);
+    }
+    std::cout << "Minimum amount: " << min_amount << std::endl;
+    std::cout << "Mean amount: " << mean_amount << std::endl;
+    std::cout << "Maximum amount: " << max_amount << std::endl;
 }
 
 void Plant::updateDiffusionDelta(float dt)

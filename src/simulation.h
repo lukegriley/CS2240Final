@@ -21,14 +21,14 @@ public:
     void toggleWire();
 
     double dynamic_viscosity = 9e-7;
-    double uniform_loss_rate = 3;
+    double uniform_loss_rate = 1e3;
 
     double density = 7800;
     Eigen::Vector3d gravity {0, 0, -1e-4};
     double min_youngs_modulus = 1;
     double max_youngs_modulus = 1e10;
-    double elastic_threshold = 1e-8;
-    double elastic_steepness = 1e9;
+    double elastic_threshold = 3e-7;
+    double elastic_steepness = 1e8;
     double torsion_modulus = 79000000000;
 private:
     Shape m_shape;
