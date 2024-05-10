@@ -80,7 +80,7 @@ class PlantSimulation:
         
         # Compute rest index
         # Converts y-up coordinate to world coordinate
-        self.rest_quaternions = [z_to_y @ b.matrix_local.to_quaternion() for b in self.armature.bones]
+        self.rest_quaternions = [b.matrix_local.to_quaternion() for b in self.armature.bones]
 
 
     def export(self, out_file_path):
@@ -153,7 +153,7 @@ class PlantSimulation:
             if bone.parent is None:
                 q_parent = Quaternion((1, 0, 0, 0))
                 q_parent_initial = Quaternion((1, 0, 0, 0))
-                q_parent_rest = Quaternion((1, 0, 0, 0))
+                q_parent_rest = z_to_y.conjugated()
             else:
                 q_parent, _ = poses[self.reverse_index[bone.parent]]
                 q_parent_initial, _ = self.initial_poses[self.reverse_index[bone.parent]]
@@ -165,10 +165,46 @@ class PlantSimulation:
             q_from_parent_initial = q_parent_initial.conjugated() @ q_initial
             q_from_parent_rest = q_parent_rest.conjugated() @ q_rest
 
-            q_to_global = z_to_y @ q_from_parent @ z_to_y.conjugated()
 
-            bone.rotation_quaternion = q_to_global @ q_from_parent_rest.conjugated()
-            # bone.rotation_quaternion = Quaternion((1, 0, 0, 0))
+            # There are actually four spaces:
+            # Blender global space (automatic from bone local space)
+            # Bone parent space
+            # Blender bone local space
+            # Physics local space (relative to parent, Easily calculated from physics local space)
+            # Physics bone global space (from physics simulation)
+            
+            #arbitrary = Quaternion((1, 2, 3, 4)).normalized()
+            #q = arbitrary @ Matrix.Rotation(0.1, 4, 'X').to_quaternion()
+            #q_parent = arbitrary @ Quaternion((1, 0, 0, 0))
+            
+
+            physics_parent_to_global = q_parent
+            physics_global_to_parent = physics_parent_to_global.conjugated() # Trivial
+            q_physics_from_parent = physics_global_to_parent @ q
+            # If we apply q_physics_from_parent to q_physics_local, we should get q_parent
+            # the parent-to-local transformations are invisible transformations that are fixed in edit mode
+            # Remember that q_initial is global. (Shouldn't actually matter for linear transformations.)
+            physics_local_to_parent = q_parent_initial.conjugated() @ q_initial
+            physics_parent_to_local = physics_local_to_parent.conjugated() # Trivial
+            q_physics_local = physics_parent_to_local @ q_physics_from_parent
+            # physics_local_to_parent @ local_local_q should equal q_from_parent
+            
+            # Experimentation required
+            physics_to_blender = Matrix([
+                [ 1, 0, 0 ],
+                [ 0, 0, 1 ],
+                [ 0, -1, 0 ],
+            ]).to_quaternion()
+
+            q_blender_from_parent = physics_to_blender @ q_physics_from_parent @ physics_to_blender.conjugated()
+            
+            # Fixed for any bone during edit mode
+            blender_local_to_parent = q_parent_rest.conjugated() @ q_rest
+            blender_parent_to_local = blender_local_to_parent.conjugated() # Trivial
+            
+            q_blender_local = blender_parent_to_local @ q_blender_from_parent
+            
+            bone.rotation_quaternion = q_blender_local
             
             bone.scale = Vector((1.0, 1.0, length / l_initial))
         
@@ -216,5 +252,5 @@ water_path = base_path / 'water'
 
 
 simulation.compute_initial_poses(physics_path / 'frame-00000.txt')
-simulation.read_pose(physics_path / 'frame-00100.txt')
-#simulation.import_animations(physics_path)
+#simulation.read_pose(physics_path / 'frame-00000.txt')
+simulation.import_animations(physics_path)
