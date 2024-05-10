@@ -225,6 +225,7 @@ class PlantSimulation:
         print('Reading pose files')
         
         for frame, path in enumerate(frame_paths):
+            print(f'Reading frame {frame}/{len(frame_paths)}')
             self.read_pose(path)
             
             for i, bone in enumerate(self.pose.bones):
